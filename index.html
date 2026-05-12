@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>두근두근 자리 배치 프로그램 V2</title>
+    <title>두근두근 자리 배치 프로그램 V3 - 몽구스 에디션</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="자리배치">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3476/3476303.png">
 
     <style>
         :root {
@@ -29,105 +28,96 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- 1단계: 설정 화면 --- */
-        #setup-screen { 
-            background-color: white; 
-            padding: 30px; 
-            border-radius: 20px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
-            width: 95%;
-            max-width: 900px; 
-            margin-top: 20px; 
-            border: 3px solid var(--secondary-color); 
+        /* 몽구스 애니메이션 관련 스타일 */
+        .running-mongoose {
+            animation: run-and-tumble 0.6s ease-in-out infinite;
         }
-        
+
+        @keyframes run-and-tumble {
+            0% { transform: translateY(0px) rotate(0deg) scale(1); }
+            25% { transform: translateY(-8px) rotate(-15deg) scale(1.05); }
+            50% { transform: translateY(0px) rotate(0deg) scale(1); }
+            75% { transform: translateY(-5px) rotate(15deg) scale(1.03); }
+            100% { transform: translateY(0px) rotate(0deg) scale(1); }
+        }
+
+        /* 공통 및 설정 화면 스타일 */
+        #setup-screen { background-color: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 95%; max-width: 900px; margin-top: 20px; border: 3px solid var(--secondary-color); }
         .teacher-badge { background: var(--secondary-color); color: white; padding: 6px 15px; border-radius: 20px; font-weight: bold; display: inline-block; margin-bottom: 15px; font-size: 14px; }
-        
         .name-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
         label { font-weight: bold; font-size: 14px; color: #555; display: block; margin-bottom: 5px; }
         textarea, input { width: 100%; padding: 12px; box-sizing: border-box; border: 2px solid #eee; border-radius: 10px; font-size: 16px; transition: 0.3s; }
         textarea:focus { border-color: var(--primary-color); outline: none; background-color: #f7fbff; }
-        
         .separated-input { background: #fff5f5; border: 2px dashed #ff7675; padding: 15px; border-radius: 12px; margin-top: 20px; }
-        
         .preview-container { background: #fdfdfd; padding: 20px; border-radius: 15px; border: 1px solid #ddd; margin-top: 20px; text-align: center; }
-        #mode-toggle-btn { background-color: var(--secondary-color); color: white; border: none; padding: 12px 25px; border-radius: 30px; font-weight: bold; cursor: pointer; margin-bottom: 15px; font-size: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #mode-toggle-btn { background-color: var(--secondary-color); color: white; border: none; padding: 12px 25px; border-radius: 30px; font-weight: bold; cursor: pointer; margin-bottom: 15px; font-size: 15px; }
         #mode-toggle-btn.fixed-mode { background-color: var(--primary-color); }
-
         .preview-blackboard { background-color: #2c5e4f; color: white; margin: 10px auto; padding: 10px; border: 4px solid #8b5a2b; border-radius: 5px; font-weight: bold; width: 60%; }
-
         #preview-grid { display: grid; gap: 8px; justify-content: center; margin-top: 15px; }
         .preview-cell { background-color: #deb887; width: 60px; height: 60px; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 13px; border: 1px solid #cdaa7d; font-weight: bold; cursor: pointer; }
         .preview-cell.empty { background-color: #e0e0e0; border: 1px dashed #aaa; color: transparent; }
         .preview-cell.fixed { background-color: var(--primary-color); color: white; border: 2px solid #2980b9; font-size: 11px; }
 
-        /* 고정석 선택 팝업 */
-        #fixed-name-selector { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 20px; box-shadow: 0 0 50px rgba(0,0,0,0.3); z-index: 1000; width: 80%; max-width: 400px; max-height: 70vh; overflow-y: auto; }
-        .name-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 18px; text-align: center; font-weight: bold; }
-        .name-item:hover { background: #f0f8ff; color: var(--primary-color); }
-        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
-
-        /* --- 2단계: 학생용 화면 --- */
+        /* 학생 화면 및 모달 스타일 */
         #classroom-screen { display: none; width: 100%; max-width: 1100px; padding-bottom: 50px; }
         .blackboard { background-color: #2c5e4f; color: white; padding: 25px; border: 10px solid #8b5a2b; border-radius: 15px; font-size: 32px; font-weight: bold; margin-bottom: 25px; text-align: center; box-shadow: 0 8px 15px rgba(0,0,0,0.2); }
+        .waiting-room { background-color: white; padding: 25px; border-radius: 20px; margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; min-height: 100px; }
         
-        .waiting-room { background-color: white; padding: 25px; border-radius: 20px; margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); min-height: 100px; }
-        .student { background-color: #ffb6c1; width: 90px; height: 90px; border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; cursor: pointer; box-shadow: 0 6px 12px rgba(0,0,0,0.15); transition: 0.2s; }
-        .student:active { transform: scale(0.9); }
-        .animal-icon { font-size: 30px; margin-bottom: 5px; }
+        /* 몽구스 학생 아이콘 박스 */
+        .student { width: 90px; height: 90px; border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; cursor: pointer; transition: 0.2s; position: relative; }
+        .student svg { width: 60px; height: 60px; margin-bottom: 5px; }
 
         .desk-area { background-color: #fffde7; padding: 35px; border-radius: 25px; border: 4px dashed #ffc107; display: grid; gap: 20px; overflow-x: auto; }
-        .desk { background-color: #deb887; height: 100px; border-radius: 12px; display: flex; justify-content: center; align-items: center; flex-direction: column; border: 2px solid #cdaa7d; font-size: 18px; font-weight: bold; color: rgba(255,255,255,0.7); }
-        .desk.occupied { background-color: #fff; border: 3px solid #ffb6c1; color: #333; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .desk { background-color: #deb887; height: 100px; border-radius: 12px; display: flex; justify-content: center; align-items: center; flex-direction: column; border: 2px solid #cdaa7d; font-size: 16px; font-weight: bold; color: rgba(255,255,255,0.7); position: relative; }
+        .desk.occupied { background-color: #fff; border: 3px solid #CD853F; color: #333; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .desk.occupied svg { width: 50px; height: 50px; }
         .desk.fixed-desk { border-color: var(--primary-color); background-color: #ebf5fb; }
 
         .btn-container { margin-top: 40px; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
-        .action-btn { background-color: var(--success-color); color: white; border: none; padding: 18px 40px; font-size: 20px; border-radius: 40px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .action-btn { background-color: var(--success-color); color: white; border: none; padding: 18px 40px; font-size: 20px; border-radius: 40px; cursor: pointer; font-weight: bold; }
         .reset-btn { background-color: #95a5a6; }
 
-        @media print {
-            body { padding: 0; background: white; }
-            #setup-screen, #cover-screen, .waiting-room, .btn-container, .teacher-badge { display: none !important; }
-            #classroom-screen { display: block !important; }
-            .desk-area { border: none; padding: 0; }
-        }
+        #fixed-name-selector, #modal-overlay { display: none; position: fixed; }
+        #modal-overlay { top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
+        #fixed-name-selector { top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 20px; z-index: 1000; width: 80%; max-width: 400px; max-height: 70vh; overflow-y: auto; }
+        .name-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 18px; text-align: center; font-weight: bold; }
     </style>
 </head>
 <body>
 
+    <svg style="display: none;">
+        <symbol id="mongoose-icon" viewBox="0 0 100 100">
+            <ellipse cx="50" cy="50" rx="35" ry="30" fill="#CD853F" stroke="#8B4513" stroke-width="3"/>
+            <ellipse cx="30" cy="25" rx="8" ry="12" fill="#CD853F" stroke="#8B4513" stroke-width="3"/>
+            <ellipse cx="70" cy="25" rx="8" ry="12" fill="#CD853F" stroke="#8B4513" stroke-width="3"/>
+            <circle cx="40" cy="45" r="5" fill="#000"/>
+            <circle cx="60" cy="45" r="5" fill="#000"/>
+            <polygon points="50,55 45,60 55,60" fill="#000"/>
+            <path d="M 45 65 Q 50 70 55 65" fill="none" stroke="#000" stroke-width="2"/>
+            <path d="M 85 50 C 95 60 95 40 85 50 Z" fill="#CD853F" stroke="#8B4513" stroke-width="3"/>
+        </symbol>
+    </svg>
+
     <div id="setup-screen">
-        <div class="teacher-badge">🔒 교사용 세팅 (명단 자동 저장됨)</div>
+        <div class="teacher-badge">🔒 교사용 세팅 (자동 저장)</div>
         <h1 style="text-align:center; margin:0 0 25px 0;">✨ 두근두근 자리 배치</h1>
         
         <div class="name-inputs">
-            <div>
-                <label>앞자리 선호 (1~2열)</label>
-                <textarea id="frontStudents" rows="4" placeholder="한 줄에 한 명씩"></textarea>
-            </div>
-            <div>
-                <label>일반 배정</label>
-                <textarea id="normalStudents" rows="4"></textarea>
-            </div>
-            <div>
-                <label>뒷자리 선호</label>
-                <textarea id="backStudents" rows="4"></textarea>
-            </div>
+            <div><label>앞자리 선호 (1~2열)</label><textarea id="frontStudents" rows="3"></textarea></div>
+            <div><label>일반 배정</label><textarea id="normalStudents" rows="3">김철수
+이영희
+홍길동</textarea></div>
+            <div><label>뒷자리 선호</label><textarea id="backStudents" rows="3"></textarea></div>
         </div>
         
         <div class="separated-input">
             <label>⚡ 절대 붙으면 안 되는 학생 (예: 김철수-이영희)</label>
-            <input type="text" id="separatedStudents" placeholder="쉼표로 구분하여 여러 쌍 입력 가능">
+            <input type="text" id="separatedStudents">
         </div>
         
         <div style="display: flex; gap: 20px; margin-top:25px;">
-            <div style="flex:1">
-                <label>가로 칸 (분단)</label>
-                <input type="number" id="cols" value="5" onchange="drawPreviewMap()">
-            </div>
-            <div style="flex:1">
-                <label>세로 줄</label>
-                <input type="number" id="rows" value="5" onchange="drawPreviewMap()">
-            </div>
+            <div style="flex:1"><label>가로 칸</label><input type="number" id="cols" value="5" onchange="drawPreviewMap()"></div>
+            <div style="flex:1"><label>세로 줄</label><input type="number" id="rows" value="5" onchange="drawPreviewMap()"></div>
         </div>
 
         <div class="preview-container">
@@ -137,7 +127,6 @@
         </div>
 
         <button class="action-btn" style="width:100%; margin-top:20px;" onclick="saveAndGoToCover()">✅ 세팅 완료 및 저장</button>
-        <button class="action-btn reset-btn" style="width:100%; margin-top:10px; padding:12px;" onclick="clearAllData()">⚠️ 전체 데이터 초기화</button>
     </div>
 
     <div id="modal-overlay" onclick="closeModal()"></div>
@@ -147,11 +136,10 @@
         <button class="action-btn reset-btn" style="width:100%; margin-top:15px;" onclick="closeModal()">닫기</button>
     </div>
 
-    <div id="cover-screen" style="display:none; text-align:center; margin-top:100px; padding: 20px;">
+    <div id="cover-screen" style="display:none; text-align:center; margin-top:100px;">
         <h1 style="font-size: 80px; margin: 0;">🔒</h1>
         <h2>준비가 끝났습니다!</h2>
-        <p>아이패드를 TV에 연결한 뒤 아래 버튼을 눌러주세요.</p>
-        <button class="action-btn" onclick="enterClassroom()" style="background-color: var(--primary-color); padding: 25px 60px; font-size: 24px;">📺 교실 화면 시작</button>
+        <button class="action-btn" onclick="enterClassroom()" style="background-color: var(--primary-color);">📺 교실 화면 시작</button>
     </div>
 
     <div id="classroom-screen">
@@ -159,54 +147,31 @@
         <div id="waiting-area" class="waiting-room"></div>
         <div id="desk-area" class="desk-area"></div>
         <div class="btn-container">
-            <button class="action-btn" onclick="window.print()" style="background-color:#9b59b6;">🖨️ 인쇄하기</button>
             <button class="action-btn reset-btn" onclick="location.reload()">🔄 다시 시작</button>
         </div>
     </div>
 
     <script>
-        const allIcons = ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐥','🐧','🦉','🐺','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐙','🦑','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐈','🐈‍⬛','🐓','🦃','🦚','🦜','🦢','🦩','🕊️','🍎','🍏','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🌽','🥕','🥔','🍠','👾','👽','👻','🤖','🐉','🐲','🦕','🦖'];
         let currentMode = 'path'; 
         let fixedSeatsMap = {}; 
         let selectingSeatIndex = null;
-
-        // --- 1) 데이터 저장 및 불러오기 (LocalStorage) ---
-        function saveData() {
-            const data = {
-                front: document.getElementById('frontStudents').value,
-                normal: document.getElementById('normalStudents').value,
-                back: document.getElementById('backStudents').value,
-                separated: document.getElementById('separatedStudents').value,
-                cols: document.getElementById('cols').value,
-                rows: document.getElementById('rows').value,
-                fixedSeats: fixedSeatsMap
-            };
-            localStorage.setItem('seatPickerData', JSON.stringify(data));
-        }
+        let separatedPairs = [];
 
         function loadData() {
             const saved = localStorage.getItem('seatPickerData');
             if(saved) {
                 const data = JSON.parse(saved);
-                document.getElementById('frontStudents').value = data.front;
-                document.getElementById('normalStudents').value = data.normal;
-                document.getElementById('backStudents').value = data.back;
+                document.getElementById('frontStudents').value = data.front || "";
+                document.getElementById('normalStudents').value = data.normal || "";
+                document.getElementById('backStudents').value = data.back || "";
                 document.getElementById('separatedStudents').value = data.separated || "";
-                document.getElementById('cols').value = data.cols;
-                document.getElementById('rows').value = data.rows;
+                document.getElementById('cols').value = data.cols || 5;
+                document.getElementById('rows').value = data.rows || 5;
                 fixedSeatsMap = data.fixedSeats || {};
-                drawPreviewMap();
             }
+            drawPreviewMap();
         }
 
-        function clearAllData() {
-            if(confirm("정말로 모든 명단과 설정을 지울까요?")) {
-                localStorage.removeItem('seatPickerData');
-                location.reload();
-            }
-        }
-
-        // --- 2) 고정석 선정 기능 UI ---
         function toggleMode() {
             const btn = document.getElementById('mode-toggle-btn');
             currentMode = (currentMode === 'path') ? 'fixed' : 'path';
@@ -237,20 +202,14 @@
 
         function handleCellClick(cell, i) {
             if(currentMode === 'path') {
-                if(cell.classList.contains('fixed')) {
-                    alert("고정석을 먼저 해제해주세요."); return;
-                }
+                if(cell.classList.contains('fixed')) { alert("고정석을 먼저 해제해주세요."); return; }
                 cell.classList.toggle('empty');
                 cell.innerText = cell.classList.contains('empty') ? '' : '🪑';
             } else {
                 if(cell.classList.contains('empty')) return;
                 if(cell.classList.contains('fixed')) {
-                    delete fixedSeatsMap[i];
-                    cell.classList.remove('fixed');
-                    cell.innerText = '🪑';
-                } else {
-                    openNameSelector(i);
-                }
+                    delete fixedSeatsMap[i]; cell.classList.remove('fixed'); cell.innerText = '🪑';
+                } else { openNameSelector(i); }
             }
         }
 
@@ -260,25 +219,14 @@
             const content = document.getElementById('name-list-content');
             content.innerHTML = '';
             
-            if(allNames.length === 0) {
-                content.innerHTML = '<p style="color:red;">먼저 학생 명단을 입력해주세요!</p>';
-            } else {
-                allNames.forEach(name => {
-                    const div = document.createElement('div');
-                    div.className = 'name-item';
-                    div.innerText = name;
-                    div.onclick = () => selectNameForFixedSeat(name);
-                    content.appendChild(div);
-                });
-            }
+            allNames.forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'name-item'; div.innerText = name;
+                div.onclick = () => { fixedSeatsMap[selectingSeatIndex] = name; drawPreviewMap(); closeModal(); };
+                content.appendChild(div);
+            });
             document.getElementById('modal-overlay').style.display = 'block';
             document.getElementById('fixed-name-selector').style.display = 'block';
-        }
-
-        function selectNameForFixedSeat(name) {
-            fixedSeatsMap[selectingSeatIndex] = name;
-            drawPreviewMap();
-            closeModal();
         }
 
         function closeModal() {
@@ -293,9 +241,17 @@
             return [...f, ...n, ...b].map(v => v.trim()).filter(v => v !== "");
         }
 
-        // --- 3) 실행 로직 ---
         function saveAndGoToCover() {
-            saveData();
+            const data = {
+                front: document.getElementById('frontStudents').value, normal: document.getElementById('normalStudents').value,
+                back: document.getElementById('backStudents').value, separated: document.getElementById('separatedStudents').value,
+                cols: document.getElementById('cols').value, rows: document.getElementById('rows').value, fixedSeats: fixedSeatsMap
+            };
+            localStorage.setItem('seatPickerData', JSON.stringify(data));
+            
+            const sepText = document.getElementById('separatedStudents').value;
+            separatedPairs = sepText.split(',').map(p => p.split('-').map(s => s.trim())).filter(p => p.length === 2);
+
             document.getElementById('setup-screen').style.display = 'none';
             document.getElementById('cover-screen').style.display = 'block';
         }
@@ -314,9 +270,8 @@
             deskArea.innerHTML = '';
 
             const previewCells = document.querySelectorAll('.preview-cell');
-            const shuffledIcons = [...allIcons].sort(() => Math.random() - 0.5);
+            const mongooseHTML = `<svg><use xlink:href="#mongoose-icon"></use></svg>`;
 
-            // 학생 데이터 정리
             const front = document.getElementById('frontStudents').value.split('\n').map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
             const back = document.getElementById('backStudents').value.split('\n').map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
             const normal = document.getElementById('normalStudents').value.split('\n').map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
@@ -329,58 +284,77 @@
 
             previewCells.forEach((pCell, index) => {
                 const desk = document.createElement('div');
-                const r = Math.floor(index / cols) + 1;
-                const c = (index % cols) + 1;
-                desk.dataset.row = r;
-                desk.dataset.col = c;
+                desk.dataset.row = Math.floor(index / cols) + 1;
+                desk.dataset.col = (index % cols) + 1;
 
                 if(pCell.classList.contains('empty')) {
-                    desk.className = 'empty-space';
-                    desk.style.visibility = 'hidden';
+                    desk.className = 'empty-space'; desk.style.visibility = 'hidden';
                 } else {
                     desk.className = 'desk';
                     if(fixedSeatsMap[index]) {
                         desk.classList.add('occupied', 'fixed-desk');
                         desk.dataset.studentName = fixedSeatsMap[index];
-                        desk.innerHTML = `<div class="animal-icon">${shuffledIcons.pop()}</div>${fixedSeatsMap[index]}`;
+                        desk.innerHTML = `${mongooseHTML}<div>${fixedSeatsMap[index]}</div>`;
                     }
                 }
                 deskArea.appendChild(desk);
             });
 
-            // 대기실 학생 생성
             const waitingArea = document.getElementById('waiting-area');
             waitingArea.innerHTML = '';
             studentsToPlace.forEach(s => {
                 const div = document.createElement('div');
                 div.className = 'student';
-                const icon = shuffledIcons.pop();
-                div.innerHTML = `<div class="animal-icon">${icon}</div>${s.name}`;
+                div.innerHTML = `${mongooseHTML}<div style="margin-top:5px;">${s.name}</div>`;
+                
                 div.onclick = () => {
-                    // 여기에 기존의 랜덤 배치 + 앙숙 계산 로직 실행
-                    placeStudentRandomly(div, s, icon, rows);
+                    const availableDesks = Array.from(document.querySelectorAll('.desk:not(.occupied)'));
+                    if(availableDesks.length === 0) return;
+
+                    let targets = availableDesks;
+                    if(s.pref === 'front') targets = availableDesks.filter(d => parseInt(d.dataset.row) <= 2);
+                    else if(s.pref === 'back') targets = availableDesks.filter(d => parseInt(d.dataset.row) >= rows - 1);
+                    if(targets.length === 0) targets = availableDesks;
+
+                    const targetDesk = targets[Math.floor(Math.random() * targets.length)];
+                    
+                    // 🏃‍♂️ 몽구스 텀블링 애니메이션 로직
+                    const startRect = div.getBoundingClientRect();
+                    const endRect = targetDesk.getBoundingClientRect();
+
+                    const clone = div.cloneNode(true);
+                    clone.style.position = 'fixed';
+                    clone.style.left = startRect.left + 'px';
+                    clone.style.top = startRect.top + 'px';
+                    clone.style.margin = '0';
+                    clone.style.zIndex = '9999';
+                    
+                    // 달리면서 텀블링하는 효과 클래스 추가!
+                    clone.querySelector('svg').classList.add('running-mongoose');
+                    document.body.appendChild(clone);
+
+                    div.style.visibility = 'hidden';
+
+                    const targetLeft = endRect.left + (endRect.width / 2) - (startRect.width / 2);
+                    const targetTop = endRect.top + (endRect.height / 2) - (startRect.height / 2);
+
+                    const animation = clone.animate([
+                        { transform: `translate(0px, 0px)` },
+                        { transform: `translate(${targetLeft - startRect.left}px, ${targetTop - startRect.top}px)` }
+                    ], {
+                        duration: 700, // 0.7초 동안 달려감
+                        easing: 'ease-in-out'
+                    });
+
+                    animation.onfinish = () => {
+                        clone.remove();
+                        targetDesk.classList.add('occupied');
+                        targetDesk.dataset.studentName = s.name;
+                        targetDesk.innerHTML = `${mongooseHTML}<div style="margin-top:5px; font-size:14px;">${s.name}</div>`;
+                    };
                 };
                 waitingArea.appendChild(div);
             });
-        }
-
-        function placeStudentRandomly(studentDiv, studentData, icon, totalRows) {
-            const availableDesks = Array.from(document.querySelectorAll('.desk:not(.occupied)'));
-            if(availableDesks.length === 0) return;
-
-            let targets = availableDesks;
-            if(studentData.pref === 'front') targets = availableDesks.filter(d => parseInt(d.dataset.row) <= 2);
-            else if(studentData.pref === 'back') targets = availableDesks.filter(d => parseInt(d.dataset.row) >= totalRows - 1);
-            
-            if(targets.length === 0) targets = availableDesks;
-
-            // 최종 랜덤 선택
-            const targetDesk = targets[Math.floor(Math.random() * targets.length)];
-            
-            // 애니메이션 및 배치 (간략화)
-            studentDiv.style.visibility = 'hidden';
-            targetDesk.classList.add('occupied');
-            targetDesk.innerHTML = `<div class="animal-icon">${icon}</div>${studentData.name}`;
         }
 
         window.onload = loadData;
