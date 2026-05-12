@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>몽구스 달리기 자리 배치</title>
+    <style>
+        :root { --primary: #4A90E2; --secondary: #34C759; --bg: #f8f9fa; }
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        
+        /* 설정창 스타일 */
+        #setup-screen { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 600px; margin-bottom: 30px; }
+        .input-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+        textarea, input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 15px; transition: 0.3s; box-sizing: border-box; }
+        textarea:focus, input:focus { border-color: var(--primary); outline: none; }
+        
+        .btn-row { display: flex; gap: 10px; }
+        button { flex: 1; padding: 15px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.3s; color: white; }
+        .btn-save { background-color: var(--secondary); }
+        .btn-run { background-color: var(--primary); }
+        button:hover { transform: translateY(-2px); opacity: 0.9; }
+
+        /* 교실 판 */
+        #classroom { display: grid; gap: 15px; margin-top: 20px; perspective: 1000px; }
+        .desk { width: 100px; height: 80px; border: 2px solid #ddd; background: #fff; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; transition: 0.5s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .desk.occupied { border-color: var(--primary); background-color: #eef6ff; transform: rotateX(5deg); }
+
+        /* 몽구스 애니메이션 */
+        .mongoose { position: fixed; font-size: 40px; z-index: 9999; transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0) rotate(10deg); } 50% { transform: translateY(-20px) rotate(-10deg); } }
+        .running { animation: bounce 0.25s infinite; }
+
+        .student-name { font-size: 14px; font-weight: bold; margin-top: 5px; }
+        .helper { font-size: 12px; color: #888; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="setup-screen">
+        <h2 style="text-align:center; color: var(--primary);">🦦 몽구스 달리기 배치</h2>
+        
+        <div class="input-group">
+            <label>학생 명단 (쉼표 구분)</label>
+            <textarea id="names" rows="3">김몽구, 이슬기, 박혁거세, 최수종, 하희라, 정형돈</textarea>
+        </div>
+
+        <div class="input-group">
+            <label>고정석 (이름:번호)</label>
+            <input type="text" id="fixed" placeholder="예: 김몽구:1">
+        </div>
+
+        <div class="input-group">
+            <label>기피 대상 (이름-이름)</label>
+            <input type="text" id="avoid" placeholder="예: 이슬기-최수종">
+        </div>
+
+        <div class="input-group">
+            <label>가로 분단 수 (열)</label>
+            <input type="number" id="cols" value="3">
+        </div>
+
+        <div class="btn-row">
+            <button class="btn-save" onclick="saveToLocal()">💾 설정 저장</button>
+            <button class="btn-run" onclick="launchMongoose()">🏃‍♂️ 달리기 시작!</button>
+        </div>
+        <p class="helper" style="text-align: center;">* 저장 시 아이패드에서도 이전에 쓴 명단을 불러옵니다.</p>
+    </div>
+
+    <div id="classroom"></div>
+
+    <script>
+        // 로컬 저장소에서 데이터 불러오기
+        window.onload = () => {
+            const saved = localStorage.getItem('mongoose_config');
+            if(saved) {
+                const data = JSON.parse(saved);
+                document.getElementById('names').value = data.names;
+                document.getElementById('fixed').value = data.fixed;
+                document.getElementById('avoid').value = data.
