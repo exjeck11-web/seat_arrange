@@ -2,431 +2,126 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>두근두근 자리 배치 프로그램</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="자리배치">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3476/3476303.png">
+
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f8ff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #e74c3c;
+            --success-color: #4CAF50;
+            --bg-color: #f0f8ff;
+        }
+
+        body { 
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif; 
+            background-color: var(--bg-color); 
+            margin: 0; 
+            padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            -webkit-tap-highlight-color: transparent;
+        }
 
         /* --- 1단계: 교사용 비밀 설정 화면 --- */
-        #setup-screen { background-color: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 700px; margin-top: 10px; border: 3px solid #e74c3c; }
-        .teacher-badge { background: #e74c3c; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; display: inline-block; margin-bottom: 10px; }
-        h1 { text-align: center; margin-top: 0; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        #setup-screen { 
+            background-color: white; 
+            padding: 30px; 
+            border-radius: 15px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            width: 90%;
+            max-width: 800px; 
+            margin-top: 20px; 
+            border: 3px solid var(--secondary-color); 
+        }
         
-        .name-inputs { display: flex; gap: 10px; }
-        .name-inputs > div { flex: 1; }
-        textarea, input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; font-size: 13px; }
+        .teacher-badge { background: var(--secondary-color); color: white; padding: 6px 15px; border-radius: 20px; font-weight: bold; display: inline-block; margin-bottom: 15px; font-size: 14px; }
         
-        /* 앙숙 떼어놓기 입력칸 */
-        .separated-input { background: #fff0f0; border: 2px dashed #ff7675; padding: 10px; border-radius: 10px; margin-top: 15px; }
+        .name-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        textarea, input { width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; transition: border 0.3s; }
+        textarea:focus { border-color: var(--primary-color); outline: none; }
         
-        button.action-btn { background-color: #4CAF50; color: white; border: none; padding: 15px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
-        button.action-btn:hover { background-color: #45a049; }
+        .separated-input { background: #fff0f0; border: 2px dashed #ff7675; padding: 15px; border-radius: 12px; margin-top: 20px; }
+        
+        button.action-btn { background-color: var(--success-color); color: white; border: none; padding: 18px; font-size: 18px; border-radius: 12px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
 
-        .preview-container { background: #f9f9f9; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 15px; text-align: center; }
-        #mode-toggle-btn { background-color: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-bottom: 10px; transition: 0.3s; }
-        #mode-toggle-btn.fixed-mode { background-color: #3498db; }
+        .preview-container { background: #f9f9f9; padding: 20px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 15px; text-align: center; overflow-x: auto; }
+        #mode-toggle-btn { background-color: var(--secondary-color); color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
+        #mode-toggle-btn.fixed-mode { background-color: var(--primary-color); }
 
-        .preview-blackboard { background-color: #2c5e4f; color: white; margin: 10px auto; padding: 5px; border: 4px solid #8b5a2b; border-radius: 5px; font-weight: bold; font-size: 14px; width: 80%; box-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        .preview-blackboard { background-color: #2c5e4f; color: white; margin: 10px auto; padding: 10px; border: 4px solid #8b5a2b; border-radius: 5px; font-weight: bold; width: 80%; max-width: 400px; }
 
-        #preview-grid { display: grid; gap: 5px; justify-content: center; margin-top: 10px; }
-        .preview-cell { background-color: #deb887; width: 45px; height: 45px; border-radius: 5px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 12px; cursor: pointer; border: 1px solid #cdaa7d; transition: 0.2s; font-weight: bold; color:#333; }
-        
+        #preview-grid { display: grid; gap: 8px; justify-content: center; margin-top: 15px; }
+        .preview-cell { background-color: #deb887; width: 55px; height: 55px; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 14px; border: 1px solid #cdaa7d; font-weight: bold; }
         .preview-cell.empty { background-color: #e0e0e0; border: 1px dashed #aaa; color: transparent; }
-        .preview-cell.fixed { background-color: #3498db; color: white; border: 2px solid #2980b9; font-size: 11px; } 
-        .preview-cell:hover { transform: scale(1.05); }
+        .preview-cell.fixed { background-color: var(--primary-color); color: white; border: 2px solid #2980b9; font-size: 12px; }
 
-        /* --- 1.5단계: 중간 블라인드 대기 화면 --- */
-        #cover-screen { display: none; background-color: white; padding: 50px; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); width: 500px; text-align: center; margin-top: 100px; }
-
-        /* --- 2단계: 학생용 교실 화면 --- */
-        #classroom-screen { display: none; width: 100%; max-width: 1000px; }
+        /* --- 2단계: 학생용 화면 --- */
+        #classroom-screen { display: none; width: 100%; max-width: 1100px; padding-bottom: 50px; }
+        .blackboard { background-color: #2c5e4f; color: white; padding: 20px; border: 10px solid #8b5a2b; border-radius: 12px; font-size: 28px; font-weight: bold; margin-bottom: 20px; text-align: center; }
         
-        .blackboard { background-color: #2c5e4f; color: white; padding: 15px; border: 10px solid #8b5a2b; border-radius: 10px; font-size: 24px; font-weight: bold; margin-bottom: 10px; text-align: center; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); }
-        .waiting-room { background-color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; min-height: 80px; }
+        .waiting-room { background-color: white; padding: 25px; border-radius: 20px; margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 
-        .student { background-color: #ffb6c1; color: #333; width: 70px; height: 70px; border-radius: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: transform 0.2s; z-index: 10; position: relative; }
-        .student:hover { transform: scale(1.1); background-color: #ff6b81; color: white; }
-        .animal-icon { font-size: 24px; margin-bottom: 3px; }
-        .student-name { font-weight: bold; color: #333; pointer-events: none; }
+        .student { background-color: #ffb6c1; width: 85px; height: 85px; border-radius: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; cursor: pointer; box-shadow: 0 6px 8px rgba(0,0,0,0.15); transition: transform 0.2s; }
+        .student:active { transform: scale(0.9); }
 
-        .desk-area { background-color: #fffde7; padding: 30px; border-radius: 15px; border: 2px dashed #ffc107; display: grid; gap: 15px; }
-        .desk { background-color: #deb887; height: 75px; border-radius: 8px; display: flex; justify-content: center; align-items: center; flex-direction: column; border: 2px solid #cdaa7d; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.1); font-size: 14px; color: rgba(255,255,255,0.7); transition: all 0.3s; position: relative; }
-        .desk.occupied { background-color: #fff; border: 3px solid #ffb6c1; color: #333; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .desk.fixed-desk { border-color: #3498db; background-color: #ebf5fb; } 
-        .empty-space { visibility: hidden; } 
+        .desk-area { background-color: #fffde7; padding: 35px; border-radius: 20px; border: 3px dashed #ffc107; display: grid; gap: 20px; overflow-x: auto; }
+        .desk { background-color: #deb887; height: 90px; border-radius: 10px; display: flex; justify-content: center; align-items: center; flex-direction: column; border: 2px solid #cdaa7d; font-size: 16px; color: rgba(255,255,255,0.8); }
+        .desk.occupied { background-color: #fff; border: 3px solid #ffb6c1; color: #333; }
+        .desk.fixed-desk { border-color: var(--primary-color); background-color: #ebf5fb; }
 
-        .bottom-list { display: none; margin-top: 30px; border-top: 2px dashed #ccc; padding-top: 20px; text-align: center; }
-        .list-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 10px; margin-top: 15px; }
-        .list-item { font-size: 14px; color: #333; font-weight: bold; background: #fff; padding: 5px; border-radius: 5px; border: 1px solid #eee; }
-
-        .btn-container { margin-top: 30px; display: flex; gap: 15px; justify-content: center; }
-        .print-btn { background-color: #9b59b6; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 30px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
-        .print-btn:hover { background-color: #8e44ad; }
-        .reset-btn { background-color: #7f8c8d; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 30px; cursor: pointer; font-weight: bold; }
-        .reset-btn:hover { background-color: #95a5a6; }
-
-        /* 다이내믹 애니메이션 */
-        @keyframes spinFlight { 0% { transform: rotate(0deg); } 100% { transform: rotate(1080deg); } }
-        @keyframes wobbleFlight { 0%, 100% { transform: translateX(0) rotate(0deg); } 25% { transform: translateX(-40px) rotate(-20deg); } 75% { transform: translateX(40px) rotate(20deg); } }
-        @keyframes zoomFlight { 0%, 100% { transform: scale(1); } 50% { transform: scale(2); } }
-        @keyframes flipFlight { 0% { transform: perspective(400px) rotateY(0deg); } 100% { transform: perspective(400px) rotateY(720deg); } }
-
-        /* 🖨️ [인쇄 설정: 명렬표 글자 크기 빵빵하게 키움!] 🖨️ */
-        @page { size: A4 landscape; margin: 1cm; }
+        .btn-container { margin-top: 40px; display: flex; gap: 20px; justify-content: center; }
+        .print-btn { background-color: #9b59b6; color: white; border: none; padding: 18px 40px; font-size: 20px; border-radius: 35px; cursor: pointer; font-weight: bold; }
 
         @media print {
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            body { padding: 0; background-color: white; }
-            #setup-screen, #cover-screen, .waiting-room, .waiting-title, .desk-title, .btn-container { display: none !important; }
-            #classroom-screen { display: block !important; width: 100% !important; max-width: none !important; margin: 0; padding: 0; }
-            
-            .blackboard { margin-top: 0; font-size: 26px; padding: 10px; margin-bottom: 15px; }
-            .desk-area { border: none; padding: 0; background-color: white; gap: 10px; } 
-            .desk { page-break-inside: avoid; border: 2px solid #ccc; height: 70px; } 
-            .animal-icon { font-size: 26px !important; margin-bottom: 5px; }
-            .student-name { font-size: 18px !important; font-weight: 900 !important; }
-
-            /* 명렬표 큼직하게 설정 (A4 가독성 최대로!) */
-            .bottom-list { display: block !important; margin-top: 20px; page-break-before: avoid; border-top: 3px solid #333; }
-            .bottom-list h4 { margin: 10px 0 15px 0; font-size: 22px; font-weight: bold; }
-            /* 한 줄에 5명씩 배치해서 글씨가 들어갈 공간을 넓혔습니다! */
-            .list-grid { grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 10px; }
-            .list-item { border: none; border-bottom: 2px solid #ddd; font-size: 18px; padding: 8px; text-align: left; background: none; font-weight: bold; }
+            body { padding: 0; background: white; }
+            #setup-screen, #cover-screen, .waiting-room, .btn-container, .teacher-badge { display: none !important; }
+            #classroom-screen { display: block !important; }
+            .desk-area { border: none; padding: 0; }
         }
     </style>
 </head>
 <body>
 
-    <!-- 1단계: 교사용 비밀 세팅 화면 -->
     <div id="setup-screen">
-        <div class="teacher-badge">🔒 교사용 비밀 세팅 모드 (학생들에게 보이지 마세요!)</div>
-        <h1>✨ 두근두근 자리 배치</h1>
+        <div class="teacher-badge">🔒 교사용 비밀 세팅 (아이패드 최적화)</div>
+        <h1 style="text-align:center; margin:0 0 20px 0;">✨ 두근두근 자리 배치</h1>
         
-        <label>1. 학생 이름 입력 (엔터로 구분)</label>
         <div class="name-inputs">
             <div>
-                <label style="color:#e67e22; font-size:12px;">🔽 앞자리(1~2열)</label>
-                <textarea id="frontStudents" rows="4">김철수</textarea>
+                <label>앞자리(1-2열)</label>
+                <textarea id="frontStudents" rows="3" placeholder="한 줄에 한 명씩"></textarea>
             </div>
             <div>
-                <label style="color:#333; font-size:12px;">🔽 일반 배정</label>
-                <textarea id="normalStudents" rows="4">이영희
-홍길동
-박지민
-최수아
-정우성
-카리나
-차은우</textarea>
+                <label>일반 배정</label>
+                <textarea id="normalStudents" rows="3"></textarea>
             </div>
             <div>
-                <label style="color:#9b59b6; font-size:12px;">🔽 뒷자리 선호</label>
-                <textarea id="backStudents" rows="4">아이유
-유재석</textarea>
+                <label>뒷자리 선호</label>
+                <textarea id="backStudents" rows="3"></textarea>
             </div>
         </div>
         
-        <!-- 💡 추가됨: 앙숙 떼어놓기 -->
         <div class="separated-input">
-            <label style="color:#d63031;">⚡ 절대 붙어 앉으면 안 되는 학생 (예: 김철수-이영희, 쉼표로 구분)</label>
-            <input type="text" id="separatedStudents" placeholder="예: 박지민-최수아, 홍길동-유재석">
+            <label>⚡ 절대 붙으면 안 되는 학생 (예: 김철수-이영희)</label>
+            <input type="text" id="separatedStudents" placeholder="쉼표로 여러 쌍 구분">
         </div>
         
-        <div class="input-group" style="margin-top:15px;">
-            <label>2. 교실 도면 및 고정석 세팅 (가로/세로 칸)</label>
-            <div style="display: flex; gap: 10px;">
-                <input type="number" id="cols" placeholder="가로 칸 (예: 5)" value="5" min="1" onchange="drawPreviewMap()">
-                <input type="number" id="rows" placeholder="세로 줄 (예: 5)" value="5" min="1" onchange="drawPreviewMap()">
+        <div style="display: flex; gap: 15px; margin-top:20px;">
+            <div style="flex:1">
+                <label>가로 칸</label>
+                <input type="number" id="cols" value="5" onchange="drawPreviewMap()">
+            </div>
+            <div style="flex:1">
+                <label>세로 줄</label>
+                <input type="number" id="rows" value="5" onchange="drawPreviewMap()">
             </div>
         </div>
 
-        <div class="preview-container">
-            <button id="mode-toggle-btn" onclick="toggleMode()">현재 모드: ❌ 통로 만들기 (클릭 시 변경)</button>
-            <div class="preview-blackboard">👨‍🏫 칠판 (교탁) 👩‍🏫</div>
-            <div id="preview-grid"></div>
-        </div>
-
-        <button class="action-btn" onclick="saveSetupAndShowCover()">✅ 세팅 완료! (대기 화면으로 넘어가기)</button>
-    </div>
-
-    <!-- 1.5단계: 학생 화면 보여주기 전 블라인드 화면 -->
-    <div id="cover-screen">
-        <h1 style="font-size: 50px; margin: 0;">🔒</h1>
-        <h2>교사용 사전 작업이 완료되었습니다!</h2>
-        <p style="color:#666; margin-bottom: 30px;">이제 교실 TV(프로젝터) 화면을 켜주세요.<br>준비가 끝나면 아래 버튼을 눌러 교실에 입장합니다.</p>
-        <button class="action-btn" onclick="enterClassroom()" style="background-color: #3498db; font-size: 20px; padding: 20px;">📺 두근두근! 교실 화면 띄우기</button>
-    </div>
-
-    <!-- 2단계: 학생용 교실 화면 -->
-    <div id="classroom-screen">
-        <div class="blackboard">👨‍🏫 칠판 (앞쪽) 👩‍🏫</div>
-        
-        <h3 style="color: #333; text-align: center;" class="waiting-title">🏃‍♂️ 대기실 (자신의 캐릭터를 터치해 보세요!)</h3>
-        <div id="waiting-area" class="waiting-room"></div>
-        
-        <h3 style="color: #333; text-align: center;" class="desk-title">🪑 교실 책상</h3>
-        <div id="desk-area" class="desk-area"></div>
-
-        <div id="bottom-list" class="bottom-list">
-            <h4>📋 우리 반 명렬표 (좌석표 확인용)</h4>
-            <div id="list-grid" class="list-grid"></div>
-        </div>
-
-        <div class="btn-container">
-            <button class="print-btn" onclick="showListAndPrint()">🖨️ 자리표 & 대형 명렬표 인쇄하기</button>
-            <button class="reset-btn" onclick="location.reload()">🔄 처음부터 다시하기</button>
-        </div>
-    </div>
-
-    <script>
-        const allIcons = ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐥','🐧','🦉','🐺','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐙','🦑','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐕‍🦺','🐈','🐈‍⬛','🐓','🦃','🦚','🦜','🦢','🦩','🕊️','🍎','🍏','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🌽','🥕','🥔','🍠','👾','👽','👻','🤖','🐉','🐲','🦕','🦖'];
-        const flightAnimations = ['spinFlight', 'wobbleFlight', 'zoomFlight', 'flipFlight'];
-        
-        let shuffledIcons = [];
-        let currentMode = 'path'; 
-        let fixedSeatsMap = {}; 
-        let separatedPairs = []; // 앙숙 명단 저장 배열
-
-        function toggleMode() {
-            const btn = document.getElementById('mode-toggle-btn');
-            if(currentMode === 'path') {
-                currentMode = 'fixed';
-                btn.innerText = "현재 모드: 📌 고정석 지정 (클릭 시 변경)";
-                btn.classList.add('fixed-mode');
-            } else {
-                currentMode = 'path';
-                btn.innerText = "현재 모드: ❌ 통로 만들기 (클릭 시 변경)";
-                btn.classList.remove('fixed-mode');
-            }
-        }
-
-        function drawPreviewMap() {
-            const cols = document.getElementById('cols').value;
-            const rows = document.getElementById('rows').value;
-            const grid = document.getElementById('preview-grid');
-            
-            grid.style.gridTemplateColumns = `repeat(${cols}, 45px)`;
-            grid.innerHTML = ''; 
-            fixedSeatsMap = {}; 
-
-            for(let i = 0; i < rows * cols; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'preview-cell';
-                cell.innerText = '🪑';
-                cell.dataset.index = i; 
-
-                cell.onclick = function() {
-                    if(currentMode === 'path') {
-                        this.classList.remove('fixed');
-                        delete fixedSeatsMap[i]; 
-                        this.classList.toggle('empty');
-                        this.innerText = this.classList.contains('empty') ? '' : '🪑';
-                    } else if (currentMode === 'fixed') {
-                        if(this.classList.contains('empty')) { alert("통로에는 학생을 앉힐 수 없습니다! ❌"); return; }
-                        if(this.classList.contains('fixed')) {
-                            this.classList.remove('fixed');
-                            this.innerText = '🪑';
-                            delete fixedSeatsMap[i];
-                        } else {
-                            const fixedName = prompt("이 자리에 고정으로 앉힐 학생 이름을 정확히 입력하세요:");
-                            if(fixedName && fixedName.trim() !== "") {
-                                this.classList.add('fixed');
-                                this.innerHTML = `📌<br>${fixedName.trim()}`;
-                                fixedSeatsMap[i] = fixedName.trim();
-                            }
-                        }
-                    }
-                };
-                grid.appendChild(cell);
-            }
-        }
-
-        window.onload = drawPreviewMap;
-
-        function getStudentsFromTextarea(id) {
-            return document.getElementById(id).value.split('\n').map(n => n.trim()).filter(n => n !== "");
-        }
-
-        function showListAndPrint() {
-            document.getElementById('bottom-list').style.display = 'block';
-            window.print();
-        }
-
-        // 💡 1단계 완료 시 실행: 데이터 세팅하고 블라인드 화면 띄우기
-        function saveSetupAndShowCover() {
-            // 앙숙 명단 파싱 (예: "철수-영희, 길동-지민" -> [['철수','영희'], ['길동','지민']])
-            const sepText = document.getElementById('separatedStudents').value;
-            if(sepText.trim() !== "") {
-                separatedPairs = sepText.split(',').map(pair => pair.split('-').map(n => n.trim())).filter(p => p.length === 2);
-            }
-
-            document.getElementById('setup-screen').style.display = 'none';
-            document.getElementById('cover-screen').style.display = 'flex'; // 블라인드 화면 등장!
-        }
-
-        // 💡 1.5단계에서 학생들 화면으로 넘어가는 함수
-        function enterClassroom() {
-            shuffledIcons = [...allIcons].sort(() => 0.5 - Math.random());
-
-            const frontList = getStudentsFromTextarea('frontStudents');
-            const normalList = getStudentsFromTextarea('normalStudents');
-            const backList = getStudentsFromTextarea('backStudents');
-            const fixedList = Object.values(fixedSeatsMap);
-            
-            // 전체 명렬표 생성 (가나다순)
-            let allUniqueNames = Array.from(new Set([...frontList, ...normalList, ...backList, ...fixedList]));
-            allUniqueNames.sort((a, b) => a.localeCompare(b, 'ko-KR'));
-
-            const listGrid = document.getElementById('list-grid');
-            listGrid.innerHTML = ''; 
-            allUniqueNames.forEach((name, index) => {
-                const div = document.createElement('div');
-                div.className = 'list-item';
-                div.innerText = `${index + 1}. ${name}`;
-                listGrid.appendChild(div);
-            });
-
-            let flyingStudents = [];
-            frontList.forEach(name => flyingStudents.push({ name: name, pref: 'front' }));
-            normalList.forEach(name => flyingStudents.push({ name: name, pref: 'normal' }));
-            backList.forEach(name => flyingStudents.push({ name: name, pref: 'back' }));
-            flyingStudents = flyingStudents.filter(s => !fixedList.includes(s.name));
-
-            const cols = parseInt(document.getElementById('cols').value);
-            const rows = parseInt(document.getElementById('rows').value);
-            const previewCells = document.querySelectorAll('.preview-cell');
-            const realDesksCount = document.querySelectorAll('.preview-cell:not(.empty)').length;
-            
-            if(flyingStudents.length + fixedList.length > realDesksCount) {
-                alert("선생님! 책상 수보다 학생 수가 더 많습니다. 도면을 수정해주세요! 😭"); 
-                location.reload(); return;
-            }
-
-            document.getElementById('cover-screen').style.display = 'none';
-            document.getElementById('classroom-screen').style.display = 'block';
-
-            const deskArea = document.getElementById('desk-area');
-            deskArea.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-
-            previewCells.forEach((pCell, index) => {
-                const deskDiv = document.createElement('div');
-                const currentRow = Math.floor(index / cols) + 1; 
-                const currentCol = (index % cols) + 1; 
-                deskDiv.dataset.row = currentRow; 
-                deskDiv.dataset.col = currentCol; // 앙숙 계산을 위해 열(칸) 정보도 저장
-
-                if(pCell.classList.contains('empty')) {
-                    deskDiv.className = 'empty-space'; 
-                } else {
-                    deskDiv.className = 'desk';
-                    if(fixedSeatsMap[index]) {
-                        const sName = fixedSeatsMap[index];
-                        const randomIcon = shuffledIcons.pop(); 
-                        deskDiv.classList.add('occupied', 'fixed-desk');
-                        deskDiv.dataset.studentName = sName; // 앉은 학생 이름 기록!
-                        
-                        // 고정석 꼬리표도 학생 몰래 빼버렸습니다 (선생님만 아는 비밀)
-                        deskDiv.innerHTML = `<div class="animal-icon">${randomIcon}</div><div class="student-name">${sName}</div>`;
-                    } else {
-                        deskDiv.innerText = '빈 자리';
-                    }
-                }
-                deskArea.appendChild(deskDiv);
-            });
-
-            const waitingArea = document.getElementById('waiting-area');
-            flyingStudents.forEach(student => {
-                const studentDiv = document.createElement('div');
-                studentDiv.className = 'student';
-                const randomIcon = shuffledIcons.pop(); 
-
-                // 💡 학생들 눈치채지 못하게 [앞], [뒤] 꼬리표 삭제! (내부 데이터로만 작동)
-                studentDiv.innerHTML = `<div class="animal-icon">${randomIcon}</div><div class="student-name">${student.name}</div>`;
-                
-                studentDiv.onclick = function() {
-                    const availableDesks = Array.from(document.querySelectorAll('.desk:not(.occupied)'));
-                    if(availableDesks.length === 0) return;
-
-                    let targetDesks = [];
-                    // 1차 필터링: 앞/뒷자리 선호도
-                    if (student.pref === 'front') targetDesks = availableDesks.filter(d => parseInt(d.dataset.row) <= 2);
-                    else if (student.pref === 'back') targetDesks = availableDesks.filter(d => parseInt(d.dataset.row) >= rows - 1);
-                    if (targetDesks.length === 0 || student.pref === 'normal') targetDesks = availableDesks;
-
-                    // 💡 2차 필터링: 앙숙 떼어놓기 로직!
-                    let myEnemies = [];
-                    separatedPairs.forEach(pair => {
-                        if(pair[0] === student.name) myEnemies.push(pair[1]);
-                        if(pair[1] === student.name) myEnemies.push(pair[0]);
-                    });
-
-                    if(myEnemies.length > 0) {
-                        // 내 앙숙들이 앉은 자리(좌표) 찾기
-                        let enemyCoords = [];
-                        document.querySelectorAll('.desk.occupied').forEach(desk => {
-                            if(myEnemies.includes(desk.dataset.studentName)) {
-                                enemyCoords.push({ r: parseInt(desk.dataset.row), c: parseInt(desk.dataset.col) });
-                            }
-                        });
-
-                        // 타겟 데스크 중에서 앙숙과 1칸 이내(상하좌우,대각선)인 자리 빼기
-                        let safeDesks = targetDesks.filter(desk => {
-                            let r = parseInt(desk.dataset.row);
-                            let c = parseInt(desk.dataset.col);
-                            let isAdjacentToEnemy = enemyCoords.some(ec => Math.abs(ec.r - r) <= 1 && Math.abs(ec.c - c) <= 1);
-                            return !isAdjacentToEnemy;
-                        });
-
-                        // 만약 안전한 자리가 하나라도 있다면 거기로 적용 (다 찼다면 어쩔 수 없이 원래 타겟으로)
-                        if(safeDesks.length > 0) {
-                            targetDesks = safeDesks;
-                        }
-                    }
-
-                    // 최종 랜덤 뽑기
-                    const randomDesk = targetDesks[Math.floor(Math.random() * targetDesks.length)];
-                    const startRect = studentDiv.getBoundingClientRect();
-                    const endRect = randomDesk.getBoundingClientRect();
-
-                    const flyingStudent = studentDiv.cloneNode(true);
-                    flyingStudent.style.position = 'fixed';
-                    flyingStudent.style.left = startRect.left + 'px';
-                    flyingStudent.style.top = startRect.top + 'px';
-                    flyingStudent.style.margin = '0';
-                    flyingStudent.style.zIndex = '9999'; 
-                    
-                    const randomAnim = flightAnimations[Math.floor(Math.random() * flightAnimations.length)];
-                    flyingStudent.style.transition = 'left 0.8s ease-in-out, top 0.8s ease-in-out';
-                    flyingStudent.style.animation = `${randomAnim} 0.8s linear`;
-                    
-                    document.body.appendChild(flyingStudent);
-                    studentDiv.style.visibility = 'hidden';
-
-                    requestAnimationFrame(() => {
-                        const targetLeft = endRect.left + (endRect.width / 2) - (startRect.width / 2);
-                        const targetTop = endRect.top + (endRect.height / 2) - (startRect.height / 2);
-                        flyingStudent.style.left = targetLeft + 'px';
-                        flyingStudent.style.top = targetTop + 'px';
-                    });
-
-                    setTimeout(() => {
-                        flyingStudent.remove();
-                        studentDiv.remove();
-                        randomDesk.classList.add('occupied');
-                        randomDesk.dataset.studentName = student.name; // 자리에 이름 도장 꾹! (앙숙 계산용)
-                        randomDesk.innerHTML = `<div class="animal-icon">${randomIcon}</div><div class="student-name">${student.name}</div>`;
-                        
-                        if(document.querySelectorAll('.waiting-room .student[style*="visibility: hidden"]').length === flyingStudents.length) {
-                            document.getElementById('waiting-area').style.display = 'none';
-                            document.querySelector('.waiting-title').style.display = 'none';
-                            document.getElementById('bottom-list').style.display = 'block';
-                        }
-                    }, 800);
-                };
-                waitingArea.appendChild(studentDiv);
-            });
-        }
-    </script>
-</body>
-</html>
+        <div class="preview
