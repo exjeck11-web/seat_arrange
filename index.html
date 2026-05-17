@@ -189,4 +189,295 @@
 
         function handleCellClick(cell, i) {
             if(currentMode === 'path') {
-                if(cell.classList.contains('fixed')) { alert("고정석을 먼저 해제해주세요."); return;
+                if(cell.classList.contains('fixed')) { alert("고정석을 먼저 해제해주세요."); return; }
+                cell.classList.toggle('empty');
+                if(cell.classList.contains('empty')) {
+                    cell.innerText = '';
+                    if(!emptySeatsArr.includes(i)) emptySeatsArr.push(i);
+                } else {
+                    cell.innerText = '🪑';
+                    emptySeatsArr = emptySeatsArr.filter(idx => idx !== i);
+                }
+            } else {
+                if(cell.classList.contains('empty')) return;
+                if(cell.classList.contains('fixed')) {
+                    delete fixedSeatsMap[i]; cell.classList.remove('fixed'); cell.innerText = '🪑';
+                } else { openNameSelector(i); }
+            }
+        }
+
+        function openNameSelector(index) {
+            selectingSeatIndex = index;
+            const allNames = getAllInputNames();
+            const content = document.getElementById('name-list-content');
+            content.innerHTML = '';
+            allNames.forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'name-item'; div.innerText = name;
+                div.onclick = () => { fixedSeatsMap[selectingSeatIndex] = name; drawPreviewMap(); closeModal(); };
+                content.appendChild(div);
+            });
+            document.getElementById('modal-overlay').style.display = 'block';
+            document.getElementById('fixed-name-selector').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            document.getElementById('fixed-name-selector').style.display = 'none';
+        }
+
+        function getAllInputNames() {
+            const f = document.getElementById('frontStudents').value.split(/,|\n/);
+            const n = document.getElementById('normalStudents').value.split(/,|\n/);
+            const b = document.getElementById('backStudents').value.split(/,|\n/);
+            return [...f, ...n, ...b].map(v => v.trim()).filter(v => v !== "");
+        }
+
+        function saveAndGoToCover() {
+            const data = {
+                front: document.getElementById('frontStudents').value, normal: document.getElementById('normalStudents').value,
+                back: document.getElementById('backStudents').value, separated: document.getElementById('separatedStudents').value,
+                cols: document.getElementById('cols').value, rows: document.getElementById('rows').value, 
+                fixedSeats: fixedSeatsMap, emptySeatsArr: emptySeatsArr 
+            };
+            localStorage.setItem('seatPickerData', JSON.stringify(data));
+            const sepText = document.getElementById('separatedStudents').value;
+            separatedPairs = sepText.split(/,|\n/).map(p => p.split('-').map(s => s.trim())).filter(p => p.length === 2);
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('cover-screen').style.display = 'block';
+        }
+
+        function enterClassroom() {
+            document.getElementById('cover-screen').style.display = 'none';
+            document.getElementById('classroom-screen').style.display = 'block';
+            renderFinalClassroom();
+        }
+
+        function renderFinalClassroom() {
+            const cols = parseInt(document.getElementById('cols').value);
+            const rows = parseInt(document.getElementById('rows').value);
+            const deskArea = document.getElementById('desk-area');
+            deskArea.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            deskArea.innerHTML = '';
+
+            const previewCells = document.querySelectorAll('.preview-cell');
+            const shuffledIcons = [...allIcons].sort(() => 0.5 - Math.random());
+
+            const front = document.getElementById('frontStudents').value.split(/,|\n/).map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
+            const back = document.getElementById('backStudents').value.split(/,|\n/).map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
+            const normal = document.getElementById('normalStudents').value.split(/,|\n/).map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
+
+            let studentsToPlace = [
+                ...front.map(n => ({name: n, pref: 'front'})),
+                ...normal.map(n => ({name: n, pref: 'normal'})),
+                ...back.map(n => ({name: n, pref: 'back'}))
+            ];
+
+            previewCells.forEach((pCell, index) => {
+                const desk = document.createElement('div');
+                desk.className = 'desk';
+                desk.dataset.row = Math.floor(index / cols) + 1;
+                desk.dataset.col = (index % cols) + 1;
+
+                if(pCell.classList.contains('empty')) {
+                    desk.className = 'empty-space'; desk.style.visibility = 'hidden';
+                } else {
+                    if(fixedSeatsMap[index]) {
+                        desk.classList.add('occupied', 'fixed-desk');
+                        desk.dataset.studentName = fixedSeatsMap[index];
+                        const icon = shuffledIcons.pop();
+                        desk.innerHTML = `<div class="char-icon">${icon}</div><div>${fixedSeatsMap[index]}</div>`;
+                    } else {
+                        desk.innerHTML = `<span style="font-size: 32px; opacity: 0.5;">🪑</span><div style="font-size: 14px; margin-top: 5px; opacity: 0.8;">빈 자리</div>`;
+                    }
+                }
+                deskArea.appendChild(desk);
+            });
+
+            const waitingArea = document.getElementById('waiting-area');
+            waitingArea.innerHTML = '';
+            studentsToPlace.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'student';
+                div.dataset.pref = s.pref;
+                
+                s.icon = shuffledIcons.pop();
+                // 🌈 대기실에서는 내부 애니메이션 클래스를 빼고 깔끔하게 띄워줍니다.
+                div.innerHTML = `<div class="char-icon">${s.icon}</div><div style="margin-top:5px;">${s.name}</div>`;
+                div.onclick = () => { placeStudentRandomly(div, s, rows); };
+                waitingArea.appendChild(div);
+            });
+        }
+
+        // 🌈 이동 궤적을 다이내믹하게 계산해주는 함수
+        function getFlightKeyframes(dx, dy, style) {
+            if (style === 'tumble') {
+                // 뒹굴뒹굴: 위로 크게 솟구치며 2바퀴 회전
+                return [
+                    { transform: `translate(0px, 0px) rotate(0deg)` },
+                    { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 150}px) rotate(360deg)` },
+                    { transform: `translate(${dx}px, ${dy}px) rotate(720deg)` }
+                ];
+            } else if (style === 'zigzag') {
+                // 왔다갔다: 직선 경로의 수직 방향으로 지그재그
+                const length = Math.sqrt(dx*dx + dy*dy) || 1;
+                const nx = -(dy / length) * 80; 
+                const ny = (dx / length) * 80;
+                return [
+                    { transform: `translate(0px, 0px)` },
+                    { transform: `translate(${dx * 0.33 + nx}px, ${dy * 0.33 + ny}px)` },
+                    { transform: `translate(${dx * 0.66 - nx}px, ${dy * 0.66 - ny}px)` },
+                    { transform: `translate(${dx}px, ${dy}px)` }
+                ];
+            } else if (style === 'bounce') {
+                // 통통 튀기: m자 모양으로 바운스
+                return [
+                    { transform: `translate(0px, 0px)` },
+                    { transform: `translate(${dx * 0.25}px, ${dy * 0.25 - 100}px)` },
+                    { transform: `translate(${dx * 0.5}px, ${dy * 0.5}px)` },
+                    { transform: `translate(${dx * 0.75}px, ${dy * 0.75 - 100}px)` },
+                    { transform: `translate(${dx}px, ${dy}px)` }
+                ];
+            } else {
+                // 커졌다 작아지며 스핀
+                return [
+                    { transform: `translate(0px, 0px) scale(1) rotate(0deg)` },
+                    { transform: `translate(${dx * 0.5}px, ${dy * 0.5}px) scale(1.8) rotate(180deg)` },
+                    { transform: `translate(${dx}px, ${dy}px) scale(1) rotate(360deg)` }
+                ];
+            }
+        }
+
+        async function placeStudentRandomly(studentDiv, studentData, totalRows) {
+            const availableDesks = Array.from(document.querySelectorAll('.desk:not(.occupied):not([data-reserved="true"])'));
+            if(availableDesks.length === 0) return;
+
+            const remainingFrontStudents = Array.from(document.querySelectorAll('.student')).filter(el => {
+                return el.style.visibility !== 'hidden' && el.dataset.pref === 'front';
+            }).length;
+
+            const availableFrontDesks = availableDesks.filter(d => parseInt(d.dataset.row) <= 3).length;
+
+            let targets = availableDesks;
+
+            if(studentData.pref === 'front') {
+                targets = availableDesks.filter(d => parseInt(d.dataset.row) <= 3);
+                if(targets.length === 0) targets = availableDesks; 
+            } else if(studentData.pref === 'back') {
+                targets = availableDesks.filter(d => parseInt(d.dataset.row) >= totalRows - 1);
+                if(availableFrontDesks <= remainingFrontStudents) targets = targets.filter(d => parseInt(d.dataset.row) > 3);
+                if(targets.length === 0) targets = availableDesks.filter(d => parseInt(d.dataset.row) > 3);
+                if(targets.length === 0) targets = availableDesks;
+            } else {
+                if(availableFrontDesks <= remainingFrontStudents) targets = availableDesks.filter(d => parseInt(d.dataset.row) > 3);
+                if(targets.length === 0) targets = availableDesks;
+            }
+
+            let myEnemies = [];
+            separatedPairs.forEach(pair => {
+                if(pair[0] === studentData.name) myEnemies.push(pair[1]);
+                if(pair[1] === studentData.name) myEnemies.push(pair[0]);
+            });
+
+            if(myEnemies.length > 0) {
+                let enemyCoords = [];
+                document.querySelectorAll('.desk.occupied, .desk[data-reserved="true"]').forEach(desk => {
+                    if(myEnemies.includes(desk.dataset.studentName)) {
+                        enemyCoords.push({ r: parseInt(desk.dataset.row), c: parseInt(desk.dataset.col) });
+                    }
+                });
+
+                let safeDesks = targets.filter(desk => {
+                    let r = parseInt(desk.dataset.row);
+                    let c = parseInt(desk.dataset.col);
+                    return !enemyCoords.some(ec => Math.abs(ec.r - r) <= 1 && Math.abs(ec.c - c) <= 1);
+                });
+
+                if(safeDesks.length > 0) targets = safeDesks;
+            }
+
+            const actualTargetDesk = targets[Math.floor(Math.random() * targets.length)];
+            actualTargetDesk.dataset.reserved = "true";
+            actualTargetDesk.dataset.studentName = studentData.name; 
+
+            // 🎭 페이크 및 랜덤 궤적 설정
+            const myFlightStyle = flightStyles[Math.floor(Math.random() * flightStyles.length)];
+            let isFake = Math.random() < 0.3 && availableDesks.length > 1;
+            let fakeDesk = null;
+            if(isFake) {
+                const fakeCandidates = availableDesks.filter(d => d !== actualTargetDesk);
+                if(fakeCandidates.length > 0) fakeDesk = fakeCandidates[Math.floor(Math.random() * fakeCandidates.length)];
+            }
+
+            const startRect = studentDiv.getBoundingClientRect();
+            
+            const clone = studentDiv.cloneNode(true);
+            clone.style.position = 'fixed';
+            clone.style.left = startRect.left + 'px';
+            clone.style.top = startRect.top + 'px';
+            clone.style.margin = '0';
+            clone.style.zIndex = '9999';
+            document.body.appendChild(clone);
+            studentDiv.style.visibility = 'hidden';
+
+            try {
+                if(isFake && fakeDesk) {
+                    const fakeRect = fakeDesk.getBoundingClientRect();
+                    const dx1 = fakeRect.left + (fakeRect.width / 2) - (startRect.left + startRect.width / 2);
+                    const dy1 = fakeRect.top + (fakeRect.height / 2) - (startRect.top + startRect.height / 2);
+
+                    // 1단계: 화려한 궤적으로 페이크 자리로 이동
+                    const anim1 = clone.animate(getFlightKeyframes(dx1, dy1, myFlightStyle), { duration: 800, easing: 'ease-out', fill: 'forwards' });
+                    await anim1.finished;
+
+                    // 2단계: 멈칫하며 깜짝 놀라는 이펙트 ⁉️
+                    const surpriseText = document.createElement('div');
+                    surpriseText.innerHTML = '⁉️';
+                    surpriseText.style.position = 'absolute';
+                    surpriseText.style.top = '-25px';
+                    surpriseText.style.right = '-15px';
+                    surpriseText.style.fontSize = '35px';
+                    clone.appendChild(surpriseText);
+                    clone.querySelector('.char-icon').style.transform = 'scale(1.3)'; 
+                    
+                    await new Promise(r => setTimeout(r, 600));
+                    
+                    surpriseText.remove();
+                    clone.querySelector('.char-icon').style.transform = 'scale(1)';
+
+                    // 3단계: 진짜 자리로 빛의 속도로 스핀하며 이동
+                    const actualRect = actualTargetDesk.getBoundingClientRect();
+                    const dx2 = actualRect.left + (actualRect.width / 2) - (startRect.left + startRect.width / 2);
+                    const dy2 = actualRect.top + (actualRect.height / 2) - (startRect.top + startRect.height / 2);
+
+                    const anim2 = clone.animate([
+                        { transform: `translate(${dx1}px, ${dy1}px) rotate(0deg)` },
+                        { transform: `translate(${dx2}px, ${dy2}px) rotate(720deg)` }
+                    ], { duration: 400, easing: 'ease-in-out', fill: 'forwards' });
+
+                    await anim2.finished;
+
+                } else {
+                    // 페이크 없는 일반 이동 (화려한 궤적 적용)
+                    const actualRect = actualTargetDesk.getBoundingClientRect();
+                    const dx = actualRect.left + (actualRect.width / 2) - (startRect.left + startRect.width / 2);
+                    const dy = actualRect.top + (actualRect.height / 2) - (startRect.top + startRect.height / 2);
+
+                    const anim = clone.animate(getFlightKeyframes(dx, dy, myFlightStyle), { duration: 900, easing: 'ease-in-out', fill: 'forwards' });
+                    await anim.finished;
+                }
+
+                clone.remove();
+                delete actualTargetDesk.dataset.reserved;
+                actualTargetDesk.classList.add('occupied');
+                actualTargetDesk.innerHTML = `<div class="char-icon">${studentData.icon}</div><div style="font-size:14px;">${studentData.name}</div>`;
+                
+            } catch (error) {
+                console.error("애니메이션 오류:", error);
+            }
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>
