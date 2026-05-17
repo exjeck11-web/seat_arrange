@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title> 몽구스 자리 배치 프로그램 V3 </title>
+    <title>두근두근 자리 배치 프로그램 V3.1 - 스마트 쿼터제</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -41,7 +41,7 @@
             100% { transform: translateY(0px) rotate(0deg) scale(1); }
         }
 
-        /* 공통 및 설정 화면 스타일 */
+        /* 설정 화면 스타일 */
         #setup-screen { background-color: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 95%; max-width: 900px; margin-top: 20px; border: 3px solid var(--secondary-color); }
         .teacher-badge { background: var(--secondary-color); color: white; padding: 6px 15px; border-radius: 20px; font-weight: bold; display: inline-block; margin-bottom: 15px; font-size: 14px; }
         .name-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
@@ -63,7 +63,6 @@
         .blackboard { background-color: #2c5e4f; color: white; padding: 25px; border: 10px solid #8b5a2b; border-radius: 15px; font-size: 32px; font-weight: bold; margin-bottom: 25px; text-align: center; box-shadow: 0 8px 15px rgba(0,0,0,0.2); }
         .waiting-room { background-color: white; padding: 25px; border-radius: 20px; margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; min-height: 100px; }
         
-        /* 몽구스 학생 아이콘 박스 */
         .student { width: 90px; height: 90px; border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; cursor: pointer; transition: 0.2s; position: relative; }
         .student svg { width: 60px; height: 60px; margin-bottom: 5px; }
 
@@ -99,11 +98,11 @@
     </svg>
 
     <div id="setup-screen">
-        <div class="teacher-badge">🔒 교사용 세팅 (자동 저장)</div>
+        <div class="teacher-badge">🔒 교사용 세팅 (자동 저장 및 선점 방지 시스템 작동)</div>
         <h1 style="text-align:center; margin:0 0 25px 0;">✨ 두근두근 자리 배치</h1>
         
         <div class="name-inputs">
-            <div><label>앞자리 선호 (1~2열)</label><textarea id="frontStudents" rows="3"></textarea></div>
+            <div><label>앞자리 선호 (1~3열 배치)</label><textarea id="frontStudents" rows="3"></textarea></div>
             <div><label>일반 배정</label><textarea id="normalStudents" rows="3">김철수
 이영희
 홍길동</textarea></div>
@@ -284,13 +283,13 @@
 
             previewCells.forEach((pCell, index) => {
                 const desk = document.createElement('div');
+                desk.className = 'desk';
                 desk.dataset.row = Math.floor(index / cols) + 1;
                 desk.dataset.col = (index % cols) + 1;
 
                 if(pCell.classList.contains('empty')) {
                     desk.className = 'empty-space'; desk.style.visibility = 'hidden';
                 } else {
-                    desk.className = 'desk';
                     if(fixedSeatsMap[index]) {
                         desk.classList.add('occupied', 'fixed-desk');
                         desk.dataset.studentName = fixedSeatsMap[index];
@@ -305,56 +304,110 @@
             studentsToPlace.forEach(s => {
                 const div = document.createElement('div');
                 div.className = 'student';
+                div.dataset.pref = s.pref; // 스마트 할당용 데이터 기록
                 div.innerHTML = `${mongooseHTML}<div style="margin-top:5px;">${s.name}</div>`;
                 
                 div.onclick = () => {
-                    const availableDesks = Array.from(document.querySelectorAll('.desk:not(.occupied)'));
-                    if(availableDesks.length === 0) return;
-
-                    let targets = availableDesks;
-                    if(s.pref === 'front') targets = availableDesks.filter(d => parseInt(d.dataset.row) <= 2);
-                    else if(s.pref === 'back') targets = availableDesks.filter(d => parseInt(d.dataset.row) >= rows - 1);
-                    if(targets.length === 0) targets = availableDesks;
-
-                    const targetDesk = targets[Math.floor(Math.random() * targets.length)];
-                    
-                    // 🏃‍♂️ 몽구스 텀블링 애니메이션 로직
-                    const startRect = div.getBoundingClientRect();
-                    const endRect = targetDesk.getBoundingClientRect();
-
-                    const clone = div.cloneNode(true);
-                    clone.style.position = 'fixed';
-                    clone.style.left = startRect.left + 'px';
-                    clone.style.top = startRect.top + 'px';
-                    clone.style.margin = '0';
-                    clone.style.zIndex = '9999';
-                    
-                    // 달리면서 텀블링하는 효과 클래스 추가!
-                    clone.querySelector('svg').classList.add('running-mongoose');
-                    document.body.appendChild(clone);
-
-                    div.style.visibility = 'hidden';
-
-                    const targetLeft = endRect.left + (endRect.width / 2) - (startRect.width / 2);
-                    const targetTop = endRect.top + (endRect.height / 2) - (startRect.height / 2);
-
-                    const animation = clone.animate([
-                        { transform: `translate(0px, 0px)` },
-                        { transform: `translate(${targetLeft - startRect.left}px, ${targetTop - startRect.top}px)` }
-                    ], {
-                        duration: 700, // 0.7초 동안 달려감
-                        easing: 'ease-in-out'
-                    });
-
-                    animation.onfinish = () => {
-                        clone.remove();
-                        targetDesk.classList.add('occupied');
-                        targetDesk.dataset.studentName = s.name;
-                        targetDesk.innerHTML = `${mongooseHTML}<div style="margin-top:5px; font-size:14px;">${s.name}</div>`;
-                    };
+                    placeStudentRandomly(div, s, rows);
                 };
                 waitingArea.appendChild(div);
             });
+        }
+
+        // 🏃‍♂️ 핵심 알고리즘 기능 개선 단락
+        function placeStudentRandomly(studentDiv, studentData, totalRows) {
+            const availableDesks = Array.from(document.querySelectorAll('.desk:not(.occupied)'));
+            if(availableDesks.length === 0) return;
+
+            // 1) 대기실에 남아있는 앞자리(front) 선호 학생 수 계산
+            const remainingFrontStudents = Array.from(document.querySelectorAll('.student')).filter(el => {
+                return el.style.visibility !== 'hidden' && el.dataset.pref === 'front';
+            }).length;
+
+            // 2) 현재 비어있는 앞자리(1~3열) 책상 수 계산
+            const availableFrontDesks = availableDesks.filter(d => parseInt(d.dataset.row) <= 3).length;
+
+            let targets = availableDesks;
+
+            // 선호도 및 스마트 앞자리 쿼터 보장 필터링
+            if(studentData.pref === 'front') {
+                targets = availableDesks.filter(d => parseInt(d.dataset.row) <= 3);
+                if(targets.length === 0) targets = availableDesks; 
+            } else if(studentData.pref === 'back') {
+                targets = availableDesks.filter(d => parseInt(d.dataset.row) >= totalRows - 1);
+                // 남아있는 앞자리 자리가 앞자리 학생 수 이하로 부족해지면 일반/뒷자리 아이들은 앞자리 완전 제외
+                if(availableFrontDesks <= remainingFrontStudents) {
+                    targets = targets.filter(d => parseInt(d.dataset.row) > 3);
+                }
+                if(targets.length === 0) targets = availableDesks.filter(d => parseInt(d.dataset.row) > 3);
+                if(targets.length === 0) targets = availableDesks;
+            } else {
+                // 자유 배정(일반) 학생 필터링
+                if(availableFrontDesks <= remainingFrontStudents) {
+                    targets = availableDesks.filter(d => parseInt(d.dataset.row) > 3);
+                }
+                if(targets.length === 0) targets = availableDesks;
+            }
+
+            // 앙숙 떼어놓기 조건 반영
+            let myEnemies = [];
+            separatedPairs.forEach(pair => {
+                if(pair[0] === studentData.name) myEnemies.push(pair[1]);
+                if(pair[1] === studentData.name) myEnemies.push(pair[0]);
+            });
+
+            if(myEnemies.length > 0) {
+                let enemyCoords = [];
+                document.querySelectorAll('.desk.occupied').forEach(desk => {
+                    if(myEnemies.includes(desk.dataset.studentName)) {
+                        enemyCoords.push({ r: parseInt(desk.dataset.row), c: parseInt(desk.dataset.col) });
+                    }
+                });
+
+                let safeDesks = targets.filter(desk => {
+                    let r = parseInt(desk.dataset.row);
+                    let c = parseInt(desk.dataset.col);
+                    return !enemyCoords.some(ec => Math.abs(ec.r - r) <= 1 && Math.abs(ec.c - c) <= 1);
+                });
+
+                if(safeDesks.length > 0) targets = safeDesks;
+            }
+
+            // 최종 선정 및 애니메이션 처리
+            const targetDesk = targets[Math.floor(Math.random() * targets.length)];
+            const startRect = studentDiv.getBoundingClientRect();
+            const endRect = targetDesk.getBoundingClientRect();
+
+            const clone = studentDiv.cloneNode(true);
+            clone.style.position = 'fixed';
+            clone.style.left = startRect.left + 'px';
+            clone.style.top = startRect.top + 'px';
+            clone.style.margin = '0';
+            clone.style.zIndex = '9999';
+            clone.querySelector('svg').classList.add('running-mongoose');
+            document.body.appendChild(clone);
+
+            studentDiv.style.visibility = 'hidden';
+
+            const targetLeft = endRect.left + (endRect.width / 2) - (startRect.width / 2);
+            const targetTop = endRect.top + (endRect.height / 2) - (startRect.height / 2);
+
+            const animation = clone.animate([
+                { transform: `translate(0px, 0px)` },
+                { transform: `translate(${targetLeft - startRect.left}px, ${targetTop - startRect.top}px)` }
+            ], {
+                duration: 700,
+                easing: 'ease-in-out'
+            });
+
+            const mongooseHTML = `<svg><use xlink:href="#mongoose-icon"></use></svg>`;
+
+            animation.onfinish = () => {
+                clone.remove();
+                targetDesk.classList.add('occupied');
+                targetDesk.dataset.studentName = studentData.name;
+                targetDesk.innerHTML = `${mongooseHTML}<div style="margin-top:5px; font-size:14px;">${studentData.name}</div>`;
+            };
         }
 
         window.onload = loadData;
