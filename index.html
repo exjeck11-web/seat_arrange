@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>두근두근 자리 배치 프로그램 V3.2 - 쉼표 구분자 적용</title>
+    <title>두근두근 자리 배치 프로그램 V3.3 - 버그 픽스 및 안정성 강화</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -54,7 +54,7 @@
         #mode-toggle-btn.fixed-mode { background-color: var(--primary-color); }
         .preview-blackboard { background-color: #2c5e4f; color: white; margin: 10px auto; padding: 10px; border: 4px solid #8b5a2b; border-radius: 5px; font-weight: bold; width: 60%; }
         #preview-grid { display: grid; gap: 8px; justify-content: center; margin-top: 15px; }
-        .preview-cell { background-color: #deb887; width: 60px; height: 60px; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 13px; border: 1px solid #cdaa7d; font-weight: bold; cursor: pointer; }
+        .preview-cell { background-color: #deb887; width: 60px; height: 60px; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 13px; border: 1px solid #cdaa7d; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .preview-cell.empty { background-color: #e0e0e0; border: 1px dashed #aaa; color: transparent; }
         .preview-cell.fixed { background-color: var(--primary-color); color: white; border: 2px solid #2980b9; font-size: 11px; }
 
@@ -67,13 +67,13 @@
         .student svg { width: 60px; height: 60px; margin-bottom: 5px; }
 
         .desk-area { background-color: #fffde7; padding: 35px; border-radius: 25px; border: 4px dashed #ffc107; display: grid; gap: 20px; overflow-x: auto; }
-        .desk { background-color: #deb887; height: 100px; border-radius: 12px; display: flex; justify-content: center; align-items: center; flex-direction: column; border: 2px solid #cdaa7d; font-size: 16px; font-weight: bold; color: rgba(255,255,255,0.7); position: relative; }
+        .desk { background-color: #deb887; height: 100px; border-radius: 12px; display: flex; justify-content: center; align-items: center; flex-direction: column; border: 2px solid #cdaa7d; font-size: 16px; font-weight: bold; color: rgba(255,255,255,0.7); position: relative; transition: 0.3s; }
         .desk.occupied { background-color: #fff; border: 3px solid #CD853F; color: #333; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         .desk.occupied svg { width: 50px; height: 50px; }
         .desk.fixed-desk { border-color: var(--primary-color); background-color: #ebf5fb; }
 
         .btn-container { margin-top: 40px; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
-        .action-btn { background-color: var(--success-color); color: white; border: none; padding: 18px 40px; font-size: 20px; border-radius: 40px; cursor: pointer; font-weight: bold; }
+        .action-btn { background-color: var(--success-color); color: white; border: none; padding: 18px 40px; font-size: 20px; border-radius: 40px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.15); }
         .reset-btn { background-color: #95a5a6; }
 
         #fixed-name-selector, #modal-overlay { display: none; position: fixed; }
@@ -102,7 +102,7 @@
         <h1 style="text-align:center; margin:0 0 25px 0;">✨ 두근두근 자리 배치</h1>
         
         <div class="name-inputs">
-            <div><label>앞자리 선호 (1~3열 배치)</label><textarea id="frontStudents" rows="3" placeholder="예: 김철수, 이영희"></textarea></div>
+            <div><label>앞자리 선호 (1~3열 배치)</label><textarea id="frontStudents" rows="3" placeholder="예: 김철수, 이영희 (쉼표 또는 엔터로 구분)"></textarea></div>
             <div><label>일반 배정</label><textarea id="normalStudents" rows="3">김철수, 이영희, 홍길동</textarea></div>
             <div><label>뒷자리 선호</label><textarea id="backStudents" rows="3" placeholder="예: 유재석, 아이유"></textarea></div>
         </div>
@@ -151,20 +151,26 @@
     <script>
         let currentMode = 'path'; 
         let fixedSeatsMap = {}; 
+        let emptySeatsArr = []; // 💡 통로 저장을 위한 배열 추가
         let selectingSeatIndex = null;
         let separatedPairs = [];
 
         function loadData() {
-            const saved = localStorage.getItem('seatPickerData');
-            if(saved) {
-                const data = JSON.parse(saved);
-                document.getElementById('frontStudents').value = data.front || "";
-                document.getElementById('normalStudents').value = data.normal || "";
-                document.getElementById('backStudents').value = data.back || "";
-                document.getElementById('separatedStudents').value = data.separated || "";
-                document.getElementById('cols').value = data.cols || 5;
-                document.getElementById('rows').value = data.rows || 5;
-                fixedSeatsMap = data.fixedSeats || {};
+            try {
+                const saved = localStorage.getItem('seatPickerData');
+                if(saved) {
+                    const data = JSON.parse(saved);
+                    document.getElementById('frontStudents').value = data.front || "";
+                    document.getElementById('normalStudents').value = data.normal || "";
+                    document.getElementById('backStudents').value = data.back || "";
+                    document.getElementById('separatedStudents').value = data.separated || "";
+                    document.getElementById('cols').value = data.cols || 5;
+                    document.getElementById('rows').value = data.rows || 5;
+                    fixedSeatsMap = data.fixedSeats || {};
+                    emptySeatsArr = data.emptySeatsArr || [];
+                }
+            } catch(e) {
+                console.error("데이터 불러오기 오류:", e);
             }
             drawPreviewMap();
         }
@@ -186,12 +192,18 @@
             for(let i = 0; i < rows * cols; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'preview-cell';
-                if (fixedSeatsMap[i]) {
+                
+                // 💡 통로와 고정석 데이터 정확히 렌더링
+                if(emptySeatsArr.includes(i)) {
+                    cell.classList.add('empty');
+                    cell.innerText = '';
+                } else if (fixedSeatsMap[i]) {
                     cell.classList.add('fixed');
                     cell.innerHTML = `📌<br>${fixedSeatsMap[i]}`;
                 } else {
                     cell.innerText = '🪑';
                 }
+                
                 cell.onclick = () => handleCellClick(cell, i);
                 grid.appendChild(cell);
             }
@@ -200,8 +212,15 @@
         function handleCellClick(cell, i) {
             if(currentMode === 'path') {
                 if(cell.classList.contains('fixed')) { alert("고정석을 먼저 해제해주세요."); return; }
+                
                 cell.classList.toggle('empty');
-                cell.innerText = cell.classList.contains('empty') ? '' : '🪑';
+                if(cell.classList.contains('empty')) {
+                    cell.innerText = '';
+                    if(!emptySeatsArr.includes(i)) emptySeatsArr.push(i);
+                } else {
+                    cell.innerText = '🪑';
+                    emptySeatsArr = emptySeatsArr.filter(idx => idx !== i);
+                }
             } else {
                 if(cell.classList.contains('empty')) return;
                 if(cell.classList.contains('fixed')) {
@@ -226,24 +245,29 @@
             document.getElementById('fixed-name-selector').style.display = 'block';
         }
 
-        // 쉼표(,) 기준으로 명단 분리하도록 수정된 부분
+        // 💡 쉼표(,) 와 엔터(\n) 를 모두 완벽하게 인식하도록 정규식 분리 적용
         function getAllInputNames() {
-            const f = document.getElementById('frontStudents').value.split(',');
-            const n = document.getElementById('normalStudents').value.split(',');
-            const b = document.getElementById('backStudents').value.split(',');
+            const f = document.getElementById('frontStudents').value.split(/,|\n/);
+            const n = document.getElementById('normalStudents').value.split(/,|\n/);
+            const b = document.getElementById('backStudents').value.split(/,|\n/);
             return [...f, ...n, ...b].map(v => v.trim()).filter(v => v !== "");
         }
 
         function saveAndGoToCover() {
             const data = {
-                front: document.getElementById('frontStudents').value, normal: document.getElementById('normalStudents').value,
-                back: document.getElementById('backStudents').value, separated: document.getElementById('separatedStudents').value,
-                cols: document.getElementById('cols').value, rows: document.getElementById('rows').value, fixedSeats: fixedSeatsMap
+                front: document.getElementById('frontStudents').value, 
+                normal: document.getElementById('normalStudents').value,
+                back: document.getElementById('backStudents').value, 
+                separated: document.getElementById('separatedStudents').value,
+                cols: document.getElementById('cols').value, 
+                rows: document.getElementById('rows').value, 
+                fixedSeats: fixedSeatsMap,
+                emptySeatsArr: emptySeatsArr // 💡 통로 설정도 함께 저장
             };
             localStorage.setItem('seatPickerData', JSON.stringify(data));
             
             const sepText = document.getElementById('separatedStudents').value;
-            separatedPairs = sepText.split(',').map(p => p.split('-').map(s => s.trim())).filter(p => p.length === 2);
+            separatedPairs = sepText.split(/,|\n/).map(p => p.split('-').map(s => s.trim())).filter(p => p.length === 2);
 
             document.getElementById('setup-screen').style.display = 'none';
             document.getElementById('cover-screen').style.display = 'block';
@@ -265,12 +289,141 @@
             const previewCells = document.querySelectorAll('.preview-cell');
             const mongooseHTML = `<svg><use xlink:href="#mongoose-icon"></use></svg>`;
 
-            // 쉼표(,) 기준으로 명단 분리하도록 수정된 부분
-            const front = document.getElementById('frontStudents').value.split(',').map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
-            const back = document.getElementById('backStudents').value.split(',').map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
-            const normal = document.getElementById('normalStudents').value.split(',').map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
+            const front = document.getElementById('frontStudents').value.split(/,|\n/).map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
+            const back = document.getElementById('backStudents').value.split(/,|\n/).map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
+            const normal = document.getElementById('normalStudents').value.split(/,|\n/).map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
 
             let studentsToPlace = [
                 ...front.map(n => ({name: n, pref: 'front'})),
                 ...normal.map(n => ({name: n, pref: 'normal'})),
-                ...back.map(n => ({name: n, pref
+                ...back.map(n => ({name: n, pref: 'back'}))
+            ];
+
+            previewCells.forEach((pCell, index) => {
+                const desk = document.createElement('div');
+                desk.className = 'desk';
+                desk.dataset.row = Math.floor(index / cols) + 1;
+                desk.dataset.col = (index % cols) + 1;
+
+                if(pCell.classList.contains('empty')) {
+                    desk.className = 'empty-space'; desk.style.visibility = 'hidden';
+                } else {
+                    if(fixedSeatsMap[index]) {
+                        desk.classList.add('occupied', 'fixed-desk');
+                        desk.dataset.studentName = fixedSeatsMap[index];
+                        desk.innerHTML = `${mongooseHTML}<div style="margin-top:5px;">${fixedSeatsMap[index]}</div>`;
+                    } else {
+                        // 💡 버그 픽스! 빈 자리 시각 효과 복구
+                        desk.innerHTML = `<span style="font-size: 32px; opacity: 0.5;">🪑</span><div style="font-size: 14px; margin-top: 5px; opacity: 0.8;">빈 자리</div>`;
+                    }
+                }
+                deskArea.appendChild(desk);
+            });
+
+            const waitingArea = document.getElementById('waiting-area');
+            waitingArea.innerHTML = '';
+            studentsToPlace.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'student';
+                div.dataset.pref = s.pref;
+                div.innerHTML = `${mongooseHTML}<div style="margin-top:5px;">${s.name}</div>`;
+                
+                div.onclick = () => {
+                    placeStudentRandomly(div, s, rows);
+                };
+                waitingArea.appendChild(div);
+            });
+        }
+
+        function placeStudentRandomly(studentDiv, studentData, totalRows) {
+            const availableDesks = Array.from(document.querySelectorAll('.desk:not(.occupied)'));
+            if(availableDesks.length === 0) return;
+
+            const remainingFrontStudents = Array.from(document.querySelectorAll('.student')).filter(el => {
+                return el.style.visibility !== 'hidden' && el.dataset.pref === 'front';
+            }).length;
+
+            const availableFrontDesks = availableDesks.filter(d => parseInt(d.dataset.row) <= 3).length;
+
+            let targets = availableDesks;
+
+            if(studentData.pref === 'front') {
+                targets = availableDesks.filter(d => parseInt(d.dataset.row) <= 3);
+                if(targets.length === 0) targets = availableDesks; 
+            } else if(studentData.pref === 'back') {
+                targets = availableDesks.filter(d => parseInt(d.dataset.row) >= totalRows - 1);
+                if(availableFrontDesks <= remainingFrontStudents) {
+                    targets = targets.filter(d => parseInt(d.dataset.row) > 3);
+                }
+                if(targets.length === 0) targets = availableDesks.filter(d => parseInt(d.dataset.row) > 3);
+                if(targets.length === 0) targets = availableDesks;
+            } else {
+                if(availableFrontDesks <= remainingFrontStudents) {
+                    targets = availableDesks.filter(d => parseInt(d.dataset.row) > 3);
+                }
+                if(targets.length === 0) targets = availableDesks;
+            }
+
+            let myEnemies = [];
+            separatedPairs.forEach(pair => {
+                if(pair[0] === studentData.name) myEnemies.push(pair[1]);
+                if(pair[1] === studentData.name) myEnemies.push(pair[0]);
+            });
+
+            if(myEnemies.length > 0) {
+                let enemyCoords = [];
+                document.querySelectorAll('.desk.occupied').forEach(desk => {
+                    if(myEnemies.includes(desk.dataset.studentName)) {
+                        enemyCoords.push({ r: parseInt(desk.dataset.row), c: parseInt(desk.dataset.col) });
+                    }
+                });
+
+                let safeDesks = targets.filter(desk => {
+                    let r = parseInt(desk.dataset.row);
+                    let c = parseInt(desk.dataset.col);
+                    return !enemyCoords.some(ec => Math.abs(ec.r - r) <= 1 && Math.abs(ec.c - c) <= 1);
+                });
+
+                if(safeDesks.length > 0) targets = safeDesks;
+            }
+
+            const targetDesk = targets[Math.floor(Math.random() * targets.length)];
+            const startRect = studentDiv.getBoundingClientRect();
+            const endRect = targetDesk.getBoundingClientRect();
+
+            const clone = studentDiv.cloneNode(true);
+            clone.style.position = 'fixed';
+            clone.style.left = startRect.left + 'px';
+            clone.style.top = startRect.top + 'px';
+            clone.style.margin = '0';
+            clone.style.zIndex = '9999';
+            clone.querySelector('svg').classList.add('running-mongoose');
+            document.body.appendChild(clone);
+
+            studentDiv.style.visibility = 'hidden';
+
+            const targetLeft = endRect.left + (endRect.width / 2) - (startRect.width / 2);
+            const targetTop = endRect.top + (endRect.height / 2) - (startRect.height / 2);
+
+            const animation = clone.animate([
+                { transform: `translate(0px, 0px)` },
+                { transform: `translate(${targetLeft - startRect.left}px, ${targetTop - startRect.top}px)` }
+            ], {
+                duration: 700,
+                easing: 'ease-in-out'
+            });
+
+            const mongooseHTML = `<svg><use xlink:href="#mongoose-icon"></use></svg>`;
+
+            animation.onfinish = () => {
+                clone.remove();
+                targetDesk.classList.add('occupied');
+                targetDesk.dataset.studentName = studentData.name;
+                targetDesk.innerHTML = `${mongooseHTML}<div style="margin-top:5px; font-size:14px;">${studentData.name}</div>`;
+            };
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>
