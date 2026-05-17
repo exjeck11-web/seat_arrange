@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>두근두근 자리 배치 프로그램 V5.0 - 다이내믹 플라이트 & 페이크</title>
+    <title>두근두근 자리 배치 프로그램 V6.0 - 4구역 세밀 배치 시스템</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -28,7 +28,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* 대기실에서는 제자리 모션을 빼고 아주 살짝 둥둥 떠있는 느낌만 줍니다 */
         @keyframes gentle-float {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-4px); }
@@ -37,7 +36,7 @@
         /* 설정 화면 스타일 */
         #setup-screen { background-color: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 95%; max-width: 900px; margin-top: 20px; border: 3px solid var(--secondary-color); }
         .teacher-badge { background: var(--secondary-color); color: white; padding: 6px 15px; border-radius: 20px; font-weight: bold; display: inline-block; margin-bottom: 15px; font-size: 14px; }
-        .name-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        .name-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         label { font-weight: bold; font-size: 14px; color: #555; display: block; margin-bottom: 5px; }
         textarea, input { width: 100%; padding: 12px; box-sizing: border-box; border: 2px solid #eee; border-radius: 10px; font-size: 16px; transition: 0.3s; }
         textarea:focus { border-color: var(--primary-color); outline: none; background-color: #f7fbff; }
@@ -78,13 +77,14 @@
 <body>
 
     <div id="setup-screen">
-        <div class="teacher-badge">🔒 교사용 세팅 (명단 자동 저장)</div>
+        <div class="teacher-badge">🔒 교사용 세팅 (4구역 맞춤형 배치 시스템)</div>
         <h1 style="text-align:center; margin:0 0 25px 0;">✨ 두근두근 자리 배치</h1>
         
         <div class="name-inputs">
-            <div><label>앞자리 선호 (1~3열 배치)</label><textarea id="frontStudents" rows="3" placeholder="예: 김철수, 이영희"></textarea></div>
-            <div><label>일반 배정</label><textarea id="normalStudents" rows="3">김철수, 이영희, 홍길동</textarea></div>
-            <div><label>뒷자리 선호</label><textarea id="backStudents" rows="3" placeholder="예: 유재석, 아이유"></textarea></div>
+            <div><label>1~2열 희망</label><textarea id="frontStudents" rows="3" placeholder="예: 김철수, 이영희"></textarea></div>
+            <div><label>3열 희망</label><textarea id="midStudents" rows="3" placeholder="예: 박지성, 김연아"></textarea></div>
+            <div><label>4~5열 희망</label><textarea id="backStudents" rows="3" placeholder="예: 유재석, 아이유"></textarea></div>
+            <div><label>랜덤 배치 (일반)</label><textarea id="normalStudents" rows="3">홍길동, 이순신</textarea></div>
         </div>
         
         <div class="separated-input">
@@ -130,7 +130,7 @@
 
     <script>
         const allIcons = ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐥','🐧','🦉','🐺','🐴','🦄','🐝','🦋','🐌','🐞','🐙','🦑','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🐈','🐈‍⬛','🐓','🦃','🦚','🦜','🦢','🦩','🕊️','🦕','🦖'];
-        const flightStyles = ['tumble', 'zigzag', 'bounce', 'spin']; // 4가지 비행 궤적
+        const flightStyles = ['tumble', 'zigzag', 'bounce', 'spin']; 
 
         let currentMode = 'path'; 
         let fixedSeatsMap = {}; 
@@ -140,12 +140,13 @@
 
         function loadData() {
             try {
-                const saved = localStorage.getItem('seatPickerData');
+                const saved = localStorage.getItem('seatPickerDataV6');
                 if(saved) {
                     const data = JSON.parse(saved);
                     document.getElementById('frontStudents').value = data.front || "";
-                    document.getElementById('normalStudents').value = data.normal || "";
+                    document.getElementById('midStudents').value = data.mid || "";
                     document.getElementById('backStudents').value = data.back || "";
+                    document.getElementById('normalStudents').value = data.normal || "";
                     document.getElementById('separatedStudents').value = data.separated || "";
                     document.getElementById('cols').value = data.cols || 5;
                     document.getElementById('rows').value = data.rows || 5;
@@ -228,19 +229,25 @@
 
         function getAllInputNames() {
             const f = document.getElementById('frontStudents').value.split(/,|\n/);
-            const n = document.getElementById('normalStudents').value.split(/,|\n/);
+            const m = document.getElementById('midStudents').value.split(/,|\n/);
             const b = document.getElementById('backStudents').value.split(/,|\n/);
-            return [...f, ...n, ...b].map(v => v.trim()).filter(v => v !== "");
+            const n = document.getElementById('normalStudents').value.split(/,|\n/);
+            return [...f, ...m, ...b, ...n].map(v => v.trim()).filter(v => v !== "");
         }
 
         function saveAndGoToCover() {
             const data = {
-                front: document.getElementById('frontStudents').value, normal: document.getElementById('normalStudents').value,
-                back: document.getElementById('backStudents').value, separated: document.getElementById('separatedStudents').value,
-                cols: document.getElementById('cols').value, rows: document.getElementById('rows').value, 
-                fixedSeats: fixedSeatsMap, emptySeatsArr: emptySeatsArr 
+                front: document.getElementById('frontStudents').value, 
+                mid: document.getElementById('midStudents').value,
+                back: document.getElementById('backStudents').value, 
+                normal: document.getElementById('normalStudents').value,
+                separated: document.getElementById('separatedStudents').value,
+                cols: document.getElementById('cols').value, 
+                rows: document.getElementById('rows').value, 
+                fixedSeats: fixedSeatsMap, 
+                emptySeatsArr: emptySeatsArr 
             };
-            localStorage.setItem('seatPickerData', JSON.stringify(data));
+            localStorage.setItem('seatPickerDataV6', JSON.stringify(data));
             const sepText = document.getElementById('separatedStudents').value;
             separatedPairs = sepText.split(/,|\n/).map(p => p.split('-').map(s => s.trim())).filter(p => p.length === 2);
             document.getElementById('setup-screen').style.display = 'none';
@@ -264,13 +271,15 @@
             const shuffledIcons = [...allIcons].sort(() => 0.5 - Math.random());
 
             const front = document.getElementById('frontStudents').value.split(/,|\n/).map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
+            const mid = document.getElementById('midStudents').value.split(/,|\n/).map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
             const back = document.getElementById('backStudents').value.split(/,|\n/).map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
             const normal = document.getElementById('normalStudents').value.split(/,|\n/).map(s=>s.trim()).filter(s=>s!=="" && !Object.values(fixedSeatsMap).includes(s));
 
             let studentsToPlace = [
                 ...front.map(n => ({name: n, pref: 'front'})),
-                ...normal.map(n => ({name: n, pref: 'normal'})),
-                ...back.map(n => ({name: n, pref: 'back'}))
+                ...mid.map(n => ({name: n, pref: 'mid'})),
+                ...back.map(n => ({name: n, pref: 'back'})),
+                ...normal.map(n => ({name: n, pref: 'normal'}))
             ];
 
             previewCells.forEach((pCell, index) => {
@@ -302,24 +311,20 @@
                 div.dataset.pref = s.pref;
                 
                 s.icon = shuffledIcons.pop();
-                // 🌈 대기실에서는 내부 애니메이션 클래스를 빼고 깔끔하게 띄워줍니다.
                 div.innerHTML = `<div class="char-icon">${s.icon}</div><div style="margin-top:5px;">${s.name}</div>`;
                 div.onclick = () => { placeStudentRandomly(div, s, rows); };
                 waitingArea.appendChild(div);
             });
         }
 
-        // 🌈 이동 궤적을 다이내믹하게 계산해주는 함수
         function getFlightKeyframes(dx, dy, style) {
             if (style === 'tumble') {
-                // 뒹굴뒹굴: 위로 크게 솟구치며 2바퀴 회전
                 return [
                     { transform: `translate(0px, 0px) rotate(0deg)` },
                     { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 150}px) rotate(360deg)` },
                     { transform: `translate(${dx}px, ${dy}px) rotate(720deg)` }
                 ];
             } else if (style === 'zigzag') {
-                // 왔다갔다: 직선 경로의 수직 방향으로 지그재그
                 const length = Math.sqrt(dx*dx + dy*dy) || 1;
                 const nx = -(dy / length) * 80; 
                 const ny = (dx / length) * 80;
@@ -330,7 +335,6 @@
                     { transform: `translate(${dx}px, ${dy}px)` }
                 ];
             } else if (style === 'bounce') {
-                // 통통 튀기: m자 모양으로 바운스
                 return [
                     { transform: `translate(0px, 0px)` },
                     { transform: `translate(${dx * 0.25}px, ${dy * 0.25 - 100}px)` },
@@ -339,7 +343,6 @@
                     { transform: `translate(${dx}px, ${dy}px)` }
                 ];
             } else {
-                // 커졌다 작아지며 스핀
                 return [
                     { transform: `translate(0px, 0px) scale(1) rotate(0deg)` },
                     { transform: `translate(${dx * 0.5}px, ${dy * 0.5}px) scale(1.8) rotate(180deg)` },
@@ -352,25 +355,32 @@
             const availableDesks = Array.from(document.querySelectorAll('.desk:not(.occupied):not([data-reserved="true"])'));
             if(availableDesks.length === 0) return;
 
-            const remainingFrontStudents = Array.from(document.querySelectorAll('.student')).filter(el => {
-                return el.style.visibility !== 'hidden' && el.dataset.pref === 'front';
-            }).length;
+            // 남은 4구역 희망자 수 파악
+            const remainingFront = Array.from(document.querySelectorAll('.student')).filter(el => el.style.visibility !== 'hidden' && el.dataset.pref === 'front').length;
+            const remainingMid = Array.from(document.querySelectorAll('.student')).filter(el => el.style.visibility !== 'hidden' && el.dataset.pref === 'mid').length;
+            const remainingBack = Array.from(document.querySelectorAll('.student')).filter(el => el.style.visibility !== 'hidden' && el.dataset.pref === 'back').length;
 
-            const availableFrontDesks = availableDesks.filter(d => parseInt(d.dataset.row) <= 3).length;
+            // 현재 비어있는 각 구역의 책상 수 파악
+            const availFront = availableDesks.filter(d => parseInt(d.dataset.row) <= 2);
+            const availMid = availableDesks.filter(d => parseInt(d.dataset.row) === 3);
+            const availBack = availableDesks.filter(d => parseInt(d.dataset.row) >= 4);
 
             let targets = availableDesks;
 
             if(studentData.pref === 'front') {
-                targets = availableDesks.filter(d => parseInt(d.dataset.row) <= 3);
-                if(targets.length === 0) targets = availableDesks; 
+                targets = availFront.length > 0 ? availFront : availableDesks;
+            } else if(studentData.pref === 'mid') {
+                targets = availMid.length > 0 ? availMid : availableDesks;
             } else if(studentData.pref === 'back') {
-                targets = availableDesks.filter(d => parseInt(d.dataset.row) >= totalRows - 1);
-                if(availableFrontDesks <= remainingFrontStudents) targets = targets.filter(d => parseInt(d.dataset.row) > 3);
-                if(targets.length === 0) targets = availableDesks.filter(d => parseInt(d.dataset.row) > 3);
-                if(targets.length === 0) targets = availableDesks;
+                targets = availBack.length > 0 ? availBack : availableDesks;
             } else {
-                if(availableFrontDesks <= remainingFrontStudents) targets = availableDesks.filter(d => parseInt(d.dataset.row) > 3);
-                if(targets.length === 0) targets = availableDesks;
+                // 랜덤(일반) 배정 학생의 경우, 자리가 부족한 구역은 후보에서 제외하여 희망자 자리를 보호합니다.
+                let safeTargets = availableDesks;
+                if(availFront.length <= remainingFront) safeTargets = safeTargets.filter(d => parseInt(d.dataset.row) > 2);
+                if(availMid.length <= remainingMid) safeTargets = safeTargets.filter(d => parseInt(d.dataset.row) !== 3);
+                if(availBack.length <= remainingBack) safeTargets = safeTargets.filter(d => parseInt(d.dataset.row) < 4);
+                
+                targets = safeTargets.length > 0 ? safeTargets : availableDesks;
             }
 
             let myEnemies = [];
@@ -400,7 +410,6 @@
             actualTargetDesk.dataset.reserved = "true";
             actualTargetDesk.dataset.studentName = studentData.name; 
 
-            // 🎭 페이크 및 랜덤 궤적 설정
             const myFlightStyle = flightStyles[Math.floor(Math.random() * flightStyles.length)];
             let isFake = Math.random() < 0.3 && availableDesks.length > 1;
             let fakeDesk = null;
@@ -426,11 +435,9 @@
                     const dx1 = fakeRect.left + (fakeRect.width / 2) - (startRect.left + startRect.width / 2);
                     const dy1 = fakeRect.top + (fakeRect.height / 2) - (startRect.top + startRect.height / 2);
 
-                    // 1단계: 화려한 궤적으로 페이크 자리로 이동
                     const anim1 = clone.animate(getFlightKeyframes(dx1, dy1, myFlightStyle), { duration: 800, easing: 'ease-out', fill: 'forwards' });
                     await anim1.finished;
 
-                    // 2단계: 멈칫하며 깜짝 놀라는 이펙트 ⁉️
                     const surpriseText = document.createElement('div');
                     surpriseText.innerHTML = '⁉️';
                     surpriseText.style.position = 'absolute';
@@ -445,7 +452,6 @@
                     surpriseText.remove();
                     clone.querySelector('.char-icon').style.transform = 'scale(1)';
 
-                    // 3단계: 진짜 자리로 빛의 속도로 스핀하며 이동
                     const actualRect = actualTargetDesk.getBoundingClientRect();
                     const dx2 = actualRect.left + (actualRect.width / 2) - (startRect.left + startRect.width / 2);
                     const dy2 = actualRect.top + (actualRect.height / 2) - (startRect.top + startRect.height / 2);
@@ -458,7 +464,6 @@
                     await anim2.finished;
 
                 } else {
-                    // 페이크 없는 일반 이동 (화려한 궤적 적용)
                     const actualRect = actualTargetDesk.getBoundingClientRect();
                     const dx = actualRect.left + (actualRect.width / 2) - (startRect.left + startRect.width / 2);
                     const dy = actualRect.top + (actualRect.height / 2) - (startRect.top + startRect.height / 2);
